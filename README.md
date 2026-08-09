@@ -47,6 +47,34 @@ truth = result.truth
 The same parameters and seed produce identical frames and truth maps. See
 [`doc/simulation.md`](doc/simulation.md) for units, equations, and limitations.
 
+## Relative Characterization in DN
+
+The headless core validates dark and uniform-illumination frame stacks before
+computing response, temporal variance/noise, relative SNR, saturation onset,
+dynamic-range estimate, and linearity residuals:
+
+```python
+from datalab_camera_characterization.core import (
+  CameraExposureSeries,
+  CameraValidationParameters,
+  characterize_relative_dn,
+)
+
+result = characterize_relative_dn(
+  dark_frames,
+  (
+    CameraExposureSeries(flat_low, exposure_time_s=0.01),
+    CameraExposureSeries(flat_high, exposure_time_s=0.02),
+  ),
+  CameraValidationParameters(saturation_dn=4095),
+)
+```
+
+Input anomalies are returned as structured diagnostics before characterization.
+All metrics remain relative quantities in DN; no conversion gain, quantum
+efficiency, or calibrated radiometric quantity is estimated. See
+[`doc/characterization.md`](doc/characterization.md).
+
 ## Development
 
 ```bash

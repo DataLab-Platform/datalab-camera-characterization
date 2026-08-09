@@ -14,6 +14,7 @@ algorithms.
 ## Current Scope
 
 The repository provides package identity, namespaced metadata, a deterministic
-pure-NumPy camera simulator, an empty recipe registry, and explicit Desktop/Web
-integration boundaries. Dataset validation, characterization algorithms, and
-recipe outcomes are separate roadmap items and remain intentionally absent.
+pure-NumPy camera simulator, structured dataset validation, batch reference
+characterization in DN, an empty recipe registry, and explicit Desktop/Web
+integration boundaries. Incremental aggregation and recipe outcomes are
+separate roadmap items and remain intentionally absent.
