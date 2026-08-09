@@ -170,6 +170,22 @@ The benchmark is explicit and excluded from the default test suite. Elapsed
 time and throughput remain observations rather than portable acceptance
 thresholds; only the documented Alpha memory ceiling is enforced by the gate.
 
+## Stable Gate
+
+The Stable gate is intentionally fail-closed. It requires a self-contained,
+SHA-256-bound evidence bundle containing a documented real camera campaign,
+its acquisition protocol and validation report, and an approved independent
+scientific review. Only then does it run the existing Alpha gate:
+
+```bash
+python -m scripts.check_stable_gate
+```
+
+No such evidence bundle is currently present, so the command exits nonzero
+and the project remains Alpha. See [`doc/stable-gate.md`](doc/stable-gate.md)
+for the manifest contract, scientific content requirements, and automation
+boundary.
+
 Installing the project registers `org.datalab.camera-characterization` through the
 `datalab.plugins` entry-point group. The Desktop adapter exposes the headless
 recipe through the plugin SDK and provides a modal editor for its declared

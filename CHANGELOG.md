@@ -37,3 +37,6 @@ All notable changes to this project will be documented in this file.
   persisted provenance, rollback coverage, and explicit memory budgets.
 - Promote the pinned DataLab-Web 0.8.0 / Pyodide 0.26.4 compatibility matrix
   to `verified` after its visible-output and memory qualification passed.
+- Add a fail-closed Stable evidence gate for a hashed real camera campaign,
+  documented validation, and approved independent scientific review; the
+  project remains Alpha while those external evidence artifacts are absent.

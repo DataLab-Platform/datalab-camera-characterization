@@ -118,3 +118,14 @@ MiB traced and 337.00 MiB RSS (`2.63 x` input). The benchmark releases one
 run's outputs before starting the next, while retaining every scientific output
 for the duration of each run. The original 384 MiB ceiling therefore remains
 unchanged.
+
+## Stable Qualification
+
+Stable additionally requires a documented real camera campaign and an
+independent scientific review. `scripts/check_stable_gate.py` verifies the
+integrity and required declarations of that external evidence before invoking
+the complete Alpha gate. The required evidence is currently absent, so Stable
+is blocked rather than inferred from synthetic or browser qualification.
+
+See [`stable-gate.md`](stable-gate.md) for the evidence manifest, required
+scientific content, and limits of automated verification.
