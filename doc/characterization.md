@@ -105,6 +105,8 @@ additional complete stack: only the current block is materialized.
 Unit tests compare multiple block sizes, incomplete final blocks, integer data,
 and high-offset floating-point data against NumPy `mean` and `var(ddof=1)`.
 Equivalence is numerical within explicit floating-point tolerances, not a
-bit-for-bit promise across block sizes or NumPy versions. Representative 2048²
-memory/time measurements and campaign-size claims remain deferred to roadmap
-phase 2.7.
+bit-for-bit promise across block sizes or NumPy versions. Characterization
+extracts the scalar mean and temporal variance for one exposure before
+releasing its per-pixel maps; its retained state therefore does not grow with
+the number of flat levels. The reproducible 2048 x 2048 time and incremental
+memory protocol is documented in [`validation.md`](validation.md).

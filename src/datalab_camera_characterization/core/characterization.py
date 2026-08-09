@@ -102,26 +102,30 @@ def characterize_relative_dn(
     dark_mean_dn = dark_statistics.mean_value
     dark_temporal_variance_dn2 = dark_statistics.mean_variance
     dark_temporal_noise_dn = math.sqrt(max(dark_temporal_variance_dn2, 0.0))
+    del dark_statistics
 
-    flat_statistics = tuple(
-        compute_image_stack_statistics(
+    flat_mean_dn: list[float] = []
+    flat_temporal_variance_dn2: list[float] = []
+    for series in series_values:
+        statistics = compute_image_stack_statistics(
             series.frames_dn,
             block_size=aggregation_block_size,
             ddof=1,
         )
-        for series in series_values
-    )
+        flat_mean_dn.append(statistics.mean_value)
+        flat_temporal_variance_dn2.append(statistics.mean_variance)
+        del statistics
 
     exposure_times_s = np.array(
         [series.exposure_time_s for series in series_values],
         dtype=float,
     )
     mean_signal_dn = np.array(
-        [statistics.mean_value - dark_mean_dn for statistics in flat_statistics],
+        [mean_dn - dark_mean_dn for mean_dn in flat_mean_dn],
         dtype=float,
     )
     temporal_variance_dn2 = np.array(
-        [statistics.mean_variance for statistics in flat_statistics],
+        flat_temporal_variance_dn2,
         dtype=float,
     )
     temporal_noise_dn = np.sqrt(np.maximum(temporal_variance_dn2, 0.0))

@@ -194,6 +194,28 @@ def test_recipe_requires_namespaced_flat_exposure_metadata() -> None:
         )
 
 
+@pytest.mark.parametrize("exposure_time_s", [True, "1.0", float("nan"), -1.0])
+def test_recipe_rejects_invalid_flat_exposure_metadata(
+    exposure_time_s: object,
+) -> None:
+    """Invalid acquisition metadata cannot produce a partial recipe outcome."""
+    dark = (_frame("dark 1", 9), _frame("dark 2", 11))
+    flats = (
+        _frame("flat invalid", 30),
+        _frame("flat 1", 31, 1.0),
+        _frame("flat 2a", 49, 2.0),
+        _frame("flat 2b", 51, 2.0),
+    )
+    flats[0].metadata[EXPOSURE_TIME_METADATA_KEY] = exposure_time_s
+
+    with pytest.raises(RecipeValidationError, match=EXPOSURE_TIME_METADATA_KEY):
+        RELATIVE_DN_RECIPE.run(
+            {"dark_frames": dark, "flat_frames": flats},
+            CameraRecipeParameters(),
+            RecipeExecutionContext(),
+        )
+
+
 def test_recipe_stops_before_outputs_when_all_flats_are_saturated() -> None:
     """Core diagnostics block output construction before the anchor selection."""
     dark = (_frame("dark 1", 9), _frame("dark 2", 11))

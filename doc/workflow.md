@@ -75,5 +75,6 @@ workspace mutation and rollback remain host responsibilities.
 The workflow passes sequences of existing 2D image arrays to the core instead
 of building complete 3D stacks. Value scans, float conversion, saturation
 masks, and statistics materialize at most `aggregation_block_size` frames at a
-time. The input `ImageObj` arrays and 2D result arrays remain resident. The
-representative 2048² memory/time benchmark belongs to roadmap phase 2.7.
+time. The input `ImageObj` arrays and 2D result arrays remain resident.
+Representative 2048 x 2048 memory/time measurements are documented in
+[`validation.md`](validation.md).

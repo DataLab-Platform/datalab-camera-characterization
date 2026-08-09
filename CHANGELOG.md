@@ -12,3 +12,7 @@ All notable changes to this project will be documented in this file.
   explicit frame block size with numerical equivalence tests against NumPy.
 - Register a headless relative-DN recipe with a response-curve anchor, mean
   dark and flat images, an anchored metric table, and structured warnings.
+- Validate response, read noise, linearity, and saturation against deterministic
+  synthetic truth, with additional invalid-campaign coverage.
+- Add a reproducible 2048 x 2048 time and incremental-memory benchmark, and
+  avoid retaining per-pixel statistics for every exposure level.

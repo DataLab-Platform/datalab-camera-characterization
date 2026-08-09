@@ -25,9 +25,17 @@ characterization, and workflows call that module rather than implementing
 independent batch statistics. The accumulator accepts individual frames or
 blocks. The convenience function accepts either an existing NumPy stack or a
 sequence of 2D arrays and materializes at most the configured block size.
+Characterization reduces each per-pixel result to campaign scalars before
+processing the next exposure, so working memory does not grow with the number
+of flat levels.
 
 `workflow/relative_dn.py` translates recipe inputs and parameters into core
 types, then translates the immutable characterization result into Sigima
 objects. It never mutates a workspace. The DataLab recipe runner owns input
 slot validation, transactional cross-panel commit, scalar-result attachment,
 and `RecipeRunRecord` provenance.
+
+Scientific and resource validation live outside the production dependency
+graph. `tests/validation` compares characterization with simulator truth;
+`benchmarks` contains explicit scripts that are not collected by pytest. See
+[`validation.md`](validation.md) for the protocols and current baseline.

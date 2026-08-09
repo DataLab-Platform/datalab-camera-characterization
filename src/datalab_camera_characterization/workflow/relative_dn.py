@@ -110,7 +110,8 @@ def _flat_exposure(image: ImageObj) -> float:
     exposure_time_s = float(value)
     if not math.isfinite(exposure_time_s) or exposure_time_s < 0.0:
         raise RecipeValidationError(
-            f"Flat image {image.title!r} has an invalid exposure time"
+            f"Flat image {image.title!r} has invalid metadata "
+            f"{EXPOSURE_TIME_METADATA_KEY!r}"
         )
     return exposure_time_s
 

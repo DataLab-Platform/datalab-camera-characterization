@@ -78,7 +78,9 @@ most `aggregation_block_size` frames together; the default of one frame
 minimizes temporary memory.
 All metrics remain relative quantities in DN; no conversion gain, quantum
 efficiency, or calibrated radiometric quantity is estimated. See
-[`doc/characterization.md`](doc/characterization.md).
+[`doc/characterization.md`](doc/characterization.md). Synthetic truth tests,
+invalid campaigns, and the performance baseline are described in
+[`doc/validation.md`](doc/validation.md).
 
 ## Headless Recipe
 
@@ -103,7 +105,12 @@ output, and provenance contracts.
 python -m pip install -e ".[test]"
 python -m pytest
 python -m ruff check .
+python -m benchmarks.benchmark_characterization
 ```
+
+The benchmark is explicit and excluded from the default test suite. Its
+reported time and memory are observations for the current host, not portable
+acceptance thresholds.
 
 Installing the project registers `org.datalab.camera-characterization` through the
 `datalab.plugins` entry-point group. The Desktop adapter exposes the headless
