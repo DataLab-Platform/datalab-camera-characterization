@@ -49,6 +49,19 @@ levels. Core failures use stable structured diagnostic codes. Recipe metadata
 failures raise `RecipeValidationError` and identify the namespaced metadata
 key; characterization errors occur before any `RecipeOutcome` can be returned.
 
+## Distribution And Lifecycle
+
+`tests/integration/test_distribution_lifecycle.py` qualifies the installed
+artifact and Desktop lifecycle. It builds an isolated wheel, installs it into a
+temporary target, loads `CameraDetectorCharacterizationPlugin` through the
+real `datalab.plugins` entry point, and resolves the packaged quickstart from
+that target. It also verifies hot reload without duplicate instances or menus.
+
+The persistence check runs the quickstart recipe, saves a native DataLab HDF5
+workspace, reloads it, and resolves every input and output by its original
+UUID. The shared `RecipeRunRecord` and complete anchored `TableResult` must be
+unchanged after loading.
+
 ## Resource Benchmark
 
 Run the default benchmark from an editable checkout:

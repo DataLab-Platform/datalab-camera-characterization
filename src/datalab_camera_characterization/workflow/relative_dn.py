@@ -17,7 +17,7 @@ from datalab.recipes import (
     RecipeResultOutput,
     RecipeValidationError,
 )
-from sigima.objects import ImageObj, TableResult, create_image, create_signal
+from sigima.objects import NO_ROI, ImageObj, TableResult, create_image, create_signal
 
 from ..core import (
     CameraExposureSeries,
@@ -207,6 +207,7 @@ def _metrics_table(result, selected_flat_exposure_s: float) -> TableResult:
         kind="camera_characterization",
         headers=["Metric", "Value", "Unit", "Status"],
         data=rows,
+        roi_indices=[NO_ROI] * len(rows),
         attrs={
             "measurement_domain": "relative_dn",
             "normative": False,

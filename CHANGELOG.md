@@ -22,3 +22,5 @@ All notable changes to this project will be documented in this file.
   editing, selection gating, and transactional cross-panel recipe commit.
 - Add a packaged deterministic Camera quickstart that opens, selects, and runs
   from Desktop without requiring users to write Python.
+- Qualify isolated wheel installation, entry-point hot reload, and native HDF5
+  persistence of Camera UUIDs, provenance, and anchored metrics.

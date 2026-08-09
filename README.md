@@ -121,6 +121,11 @@ python -m ruff check .
 python -m benchmarks.benchmark_characterization
 ```
 
+The integration suite builds and installs a wheel in a temporary directory,
+loads the plugin through its real `datalab.plugins` entry point, exercises a
+Desktop hot reload, and round-trips a characterized quickstart workspace
+through native HDF5.
+
 The benchmark is explicit and excluded from the default test suite. Its
 reported time and memory are observations for the current host, not portable
 acceptance thresholds.

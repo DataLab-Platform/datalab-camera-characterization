@@ -49,6 +49,13 @@ depends on DataLab only to serialize the workspace; simulation remains in
 `core`, and opening the example still executes the normal workflow rather than
 loading precomputed results.
 
+Distribution and lifecycle qualification lives in
+`tests/integration/test_distribution_lifecycle.py`. It imports the built wheel
+outside the checkout, verifies entry-point discovery and action cleanup across
+Desktop hot reload, then persists a complete Camera run through DataLab's
+native HDF5 format. These are host integration tests; they do not add Desktop
+dependencies to `core` or `workflow`.
+
 Scientific and resource validation live outside the production dependency
 graph. `tests/validation` compares characterization with simulator truth;
 `benchmarks` contains explicit scripts that are not collected by pytest. See
