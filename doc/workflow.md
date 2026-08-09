@@ -72,9 +72,19 @@ workspace mutation and rollback remain host responsibilities.
 
 The Desktop adapter constructs and edits the descriptor's
 `CameraRecipeParameters` with the DataLab main window as dialog parent. This
-parameter form is reusable by the future run action; selecting images and
-assigning them to `dark_frames` or `flat_frames` remains outside the headless
-recipe contract.
+parameter form is reused by **Run camera characterization...**. The action is
+available for selections of at least six images, the mathematical minimum for
+two dark frames and two two-frame flat levels under the current parameter
+bounds.
+
+Before execution, a transient DataSet presents one required dark/flat choice
+per selected image. Titles containing `dark` are prefilled as dark and all
+others as flat, but these values remain visible and editable; title matching is
+only a UI convenience and is not used by the recipe or scientific core. The
+accepted assignments are passed directly as `dark_frames` and `flat_frames`.
+Input metadata is not modified. Cancellation at either form produces no
+outputs, and structured execution errors are displayed before returning to the
+unchanged workspace.
 
 ## Memory Scope
 

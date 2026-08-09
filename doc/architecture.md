@@ -38,8 +38,10 @@ and `RecipeRunRecord` provenance.
 `adapters/desktop.py` owns the modal `CameraRecipeParameters` editor and uses
 the registered DataLab main window as its parent. It does not duplicate the
 parameter schema, scientific calculation, or commit logic. A run action is
-deferred until the adapter can assign selected images to the dark and flat
-recipe slots as one complete interaction.
+enabled when the current image selection can satisfy the default campaign
+minima. A transient DataSet assigns exactly one dark or flat role to every
+selected image, then the adapter delegates validation, execution, provenance,
+and cross-panel commit to `RecipeRunner`.
 
 Scientific and resource validation live outside the production dependency
 graph. `tests/validation` compares characterization with simulator truth;

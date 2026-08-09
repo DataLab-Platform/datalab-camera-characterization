@@ -115,5 +115,7 @@ acceptance thresholds.
 Installing the project registers `org.datalab.camera-characterization` through the
 `datalab.plugins` entry-point group. The Desktop adapter exposes the headless
 recipe through the plugin SDK and provides a modal editor for its declared
-`CameraRecipeParameters`. It intentionally adds no run action until the dark
-and flat input-role assignment workflow is implemented.
+`CameraRecipeParameters`. With at least six images selected, **Run camera
+characterization...** assigns each image a dark or flat role, opens the recipe
+parameters, and delegates the cross-panel commit to DataLab's transactional
+`RecipeRunner`.
