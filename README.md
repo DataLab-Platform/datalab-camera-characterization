@@ -99,6 +99,19 @@ The recipe returns:
 See [`doc/workflow.md`](doc/workflow.md) for the input, parameter, diagnostic,
 output, and provenance contracts.
 
+## Desktop Quickstart
+
+After installing the plugin, choose **Plugins > Camera & Detector
+Characterization > Open quickstart example**. DataLab loads and selects a
+packaged synthetic campaign containing four dark frames and four flat exposure
+levels. Then choose **Run camera characterization...** and accept the explicit
+role and parameter forms to obtain the response curve, mean images, and
+anchored metrics table without writing Python.
+
+Opening the example asks before replacing a non-empty workspace. The complete
+walkthrough and expected results are documented in
+[`doc/quickstart.md`](doc/quickstart.md).
+
 ## Development
 
 ```bash

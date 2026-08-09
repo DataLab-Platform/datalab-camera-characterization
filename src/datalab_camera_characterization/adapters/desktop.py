@@ -8,6 +8,7 @@ import guidata.dataset as gds
 from datalab.config import _
 from datalab.gui.recipe_runner import RecipeCommitError, RecipeRunner
 from datalab.objectmodel import get_uuid
+from datalab.plugin_examples import PluginExample
 from datalab.plugins import PluginBase, PluginCapability, PluginInfo
 from datalab.recipes import RecipeInputs, RecipeOutcome, RecipeValidationError
 from sigima.objects import ImageObj
@@ -23,6 +24,20 @@ from ..workflow import CAMERA_RECIPES, CameraRecipeParameters
 from ..workflow.recipes import RELATIVE_DN_RECIPE
 
 MINIMUM_SELECTED_FRAME_COUNT = 6
+
+CAMERA_QUICKSTART = PluginExample(
+    id="quickstart",
+    title=_("Relative-DN Camera quickstart"),
+    description=_("Synthetic dark and flat frames for a first Camera characterization"),
+    resource=("datalab_camera_characterization:examples/camera_quickstart.h5"),
+    recipe_id=RELATIVE_DN_RECIPE.recipe_id,
+    expected_checks=(
+        "response-curve",
+        "mean-dark-image",
+        "mean-flat-image",
+        "anchored-metrics-table",
+    ),
+)
 
 
 class CameraInputRoleParameters(
@@ -100,6 +115,7 @@ class CameraDetectorCharacterizationPlugin(PluginBase):
         ),
     )
     RECIPES = CAMERA_RECIPES
+    EXAMPLES = (CAMERA_QUICKSTART,)
 
     @staticmethod
     def can_run_relative_dn(_selected_groups, selected_objects) -> bool:
@@ -172,10 +188,32 @@ class CameraDetectorCharacterizationPlugin(PluginBase):
             self.show_error(str(error))
             return None
 
+    def open_quickstart(self) -> PluginExample | None:
+        """Open the packaged quickstart and select all Camera input images."""
+        if self.main is None:
+            raise RuntimeError("Plugin must be registered before opening quickstart")
+        if not self.main.confirm_memory_state():
+            return None
+        if any(len(panel) for panel in self.main.panels) and not self.ask_yesno(
+            _("Opening the quickstart replaces the current workspace. Continue?"),
+            title=_("Open quickstart example"),
+        ):
+            return None
+        example = self.open_example(CAMERA_QUICKSTART.id, reset_all=True)
+        images = self.imagepanel.objmodel.get_all_objects()
+        self.imagepanel.objview.select_objects(images)
+        return example
+
     def create_actions(self) -> None:
         """Create the complete relative-DN Camera workflow action."""
         handler = self.imagepanel.acthandler
         with handler.new_menu(PLUGIN_NAME):
+            self.open_quickstart_action = handler.new_action(
+                _("Open quickstart example"),
+                triggered=self.open_quickstart,
+                tip=_("Open and select the packaged synthetic Camera campaign"),
+                select_condition="always",
+            )
             self.run_relative_dn_action = handler.new_action(
                 _("Run camera characterization..."),
                 triggered=self.run_relative_dn_from_selection,

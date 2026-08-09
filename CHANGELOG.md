@@ -20,3 +20,5 @@ All notable changes to this project will be documented in this file.
   input-role assignment and recipe launch remain a separate UI step.
 - Add the Desktop run action with explicit per-image dark/flat roles, parameter
   editing, selection gating, and transactional cross-panel recipe commit.
+- Add a packaged deterministic Camera quickstart that opens, selects, and runs
+  from Desktop without requiring users to write Python.

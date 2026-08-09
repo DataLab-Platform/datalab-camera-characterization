@@ -20,6 +20,7 @@ from sigima.objects import ImageObj, create_image
 from datalab_camera_characterization import PLUGIN_ID
 from datalab_camera_characterization.adapters import desktop as desktop_adapter
 from datalab_camera_characterization.adapters.desktop import (
+    CAMERA_QUICKSTART,
     CameraDetectorCharacterizationPlugin,
     CameraInputRoleParameters,
 )
@@ -41,6 +42,9 @@ def test_plugin_descriptor() -> None:
         }
     )
     assert CameraDetectorCharacterizationPlugin.get_recipes() == (RELATIVE_DN_RECIPE,)
+    assert CameraDetectorCharacterizationPlugin.get_examples() == (CAMERA_QUICKSTART,)
+    assert CAMERA_QUICKSTART.resolve().is_file()
+    assert CAMERA_QUICKSTART.recipe_id == RELATIVE_DN_RECIPE.recipe_id
     assert RELATIVE_DN_RECIPE.plugin_id == PLUGIN_ID
     assert RELATIVE_DN_RECIPE.plugin_version == "0.1.0"
     assert RELATIVE_DN_RECIPE.parameter_class is CameraRecipeParameters
@@ -76,6 +80,9 @@ def test_desktop_parameter_editor_requires_registered_plugin() -> None:
 
     with pytest.raises(RuntimeError, match="registered"):
         plugin.edit_relative_dn_parameters()
+
+    with pytest.raises(RuntimeError, match="registered"):
+        plugin.open_quickstart()
 
 
 def test_desktop_forms_open_in_unattended_application() -> None:
@@ -256,7 +263,7 @@ def test_desktop_action_assigns_selection_and_commits_cross_panel_outputs(
             window.imagepanel.add_object(image, set_current=False)
         window.imagepanel.objview.select_objects(selected_images)
 
-        plugin = CameraDetectorCharacterizationPlugin()
+        plugin = desktop_adapter.CameraDetectorCharacterizationPlugin()
         plugin.main = window
         handler = window.imagepanel.acthandler
         with handler.new_category(ActionCategory.PLUGINS):
@@ -284,6 +291,92 @@ def test_desktop_action_assigns_selection_and_commits_cross_panel_outputs(
         tables = list(TableAdapter.iterate_from_obj(response))
         assert len(tables) == 1
         assert tables[0].func_name == (f"{RELATIVE_DN_RECIPE.recipe_id}:metrics")
+
+
+def test_desktop_quickstart_action_opens_and_runs_packaged_example(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The visible quickstart path produces a useful result without Python."""
+    warnings: list[str] = []
+    errors: list[str] = []
+    with (
+        execenv.context(unattended=True),
+        datalab_test_app_context(
+            console=False,
+            exec_loop=False,
+        ) as window,
+    ):
+        plugin = desktop_adapter.CameraDetectorCharacterizationPlugin()
+        plugin.main = window
+        monkeypatch.setattr(plugin, "show_warning", warnings.append)
+        monkeypatch.setattr(plugin, "show_error", errors.append)
+        handler = window.imagepanel.acthandler
+        with handler.new_category(ActionCategory.PLUGINS):
+            plugin.create_actions()
+
+        handler.selected_objects_changed([], [])
+        assert plugin.open_quickstart_action.isEnabled()
+        plugin.open_quickstart_action.trigger()
+
+        input_images = window.imagepanel.objmodel.get_all_objects()
+        selected_images = window.imagepanel.objview.get_sel_objects()
+        flat_exposures = {
+            image.metadata[EXPOSURE_TIME_METADATA_KEY]
+            for image in input_images
+            if EXPOSURE_TIME_METADATA_KEY in image.metadata
+        }
+        assert len(input_images) == 20
+        assert selected_images == input_images
+        assert sum(image.title.startswith("Dark") for image in input_images) == 4
+        assert flat_exposures == {0.005, 0.01, 0.02, 0.04}
+        assert plugin.run_relative_dn_action.isEnabled()
+
+        # Real modal widgets are smoke-tested separately from this action flow.
+        monkeypatch.setattr(
+            plugin,
+            "edit_input_roles",
+            lambda images: desktop_adapter.CameraInputRoleParameters.create(
+                images
+            ).to_recipe_inputs(),
+        )
+        monkeypatch.setattr(
+            plugin,
+            "edit_relative_dn_parameters",
+            desktop_adapter.CameraRecipeParameters,
+        )
+        plugin.run_relative_dn_action.trigger()
+
+        assert not warnings
+        assert not errors
+        assert len(window.signalpanel) == 1
+        assert len(window.imagepanel) == 22
+        response = window.signalpanel[1]
+        tables = list(TableAdapter.iterate_from_obj(response))
+        assert len(tables) == 1
+        assert tables[0].func_name == (f"{RELATIVE_DN_RECIPE.recipe_id}:metrics")
+
+
+def test_desktop_quickstart_cancel_preserves_current_workspace(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Declining replacement leaves existing objects untouched."""
+    existing = _frame("Existing image", 42)
+    with (
+        execenv.context(unattended=True),
+        datalab_test_app_context(
+            console=False,
+            exec_loop=False,
+        ) as window,
+    ):
+        window.imagepanel.add_object(existing)
+        plugin = CameraDetectorCharacterizationPlugin()
+        plugin.main = window
+        monkeypatch.setattr(plugin, "ask_yesno", lambda *args, **kwargs: False)
+
+        opened = plugin.open_quickstart()
+
+        assert opened is None
+        assert window.imagepanel.objmodel.get_all_objects() == [existing]
 
 
 def test_desktop_action_reports_invalid_campaign_without_partial_outputs(

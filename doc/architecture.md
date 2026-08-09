@@ -43,6 +43,12 @@ minima. A transient DataSet assigns exactly one dark or flat role to every
 selected image, then the adapter delegates validation, execution, provenance,
 and cross-panel commit to `RecipeRunner`.
 
+The packaged quickstart is a native DataLab HDF5 resource declared by the
+Desktop adapter through `PluginExample`. Its deterministic generation script
+depends on DataLab only to serialize the workspace; simulation remains in
+`core`, and opening the example still executes the normal workflow rather than
+loading precomputed results.
+
 Scientific and resource validation live outside the production dependency
 graph. `tests/validation` compares characterization with simulator truth;
 `benchmarks` contains explicit scripts that are not collected by pytest. See
