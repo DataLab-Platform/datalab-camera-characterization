@@ -22,8 +22,8 @@ core  <---  workflow  <---  adapters/desktop.py
 - `core` contains host-independent domain code.
 - `workflow` composes the core into headless recipes.
 - `adapters/desktop.py` is the DataLab Desktop plugin entry point.
-- `adapters/web.py` is the thin DataLab-Web boundary and is currently marked
-  `untested`.
+- `adapters/web.py` is the thin DataLab-Web boundary and reports `verified`
+  for its pinned browser matrix.
 
 `core` and `workflow` must not import Qt, DataLab GUI modules, Pyodide browser
 shims, or host adapters. Tests enforce this dependency direction.
@@ -135,8 +135,8 @@ frames. Recipe execution delegates to the shared headless workflow.
 A real Chromium/Pyodide qualification now executes the shared recipe and
 checks a visible response curve, PRNU-like map, and anchored metrics table. It
 also enforces incremental WASM-heap and retained-array budgets on the packaged
-campaign. The manifest intentionally remains `untested` until the compatibility
-status is advanced in a separate reviewed change. See
+campaign. The separately reviewed manifest reports `verified` only for the
+exact versions recorded by the adapter and qualification report. See
 [`doc/web-qualification.md`](doc/web-qualification.md).
 
 ## Alpha Gate

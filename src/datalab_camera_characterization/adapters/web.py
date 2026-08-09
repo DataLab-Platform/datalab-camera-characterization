@@ -20,7 +20,7 @@ from ..workflow import (
     CameraRecipeParameters,
 )
 
-WEB_STATUS = "untested"
+WEB_STATUS = "verified"
 DATALAB_WEB_VERSION = "0.8.0"
 PYODIDE_VERSION = "0.26.4"
 QUICKSTART_FILENAME = "camera_quickstart.h5"

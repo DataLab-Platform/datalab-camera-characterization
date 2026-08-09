@@ -29,15 +29,15 @@ def _frame(title: str, value: int, exposure_time_s: float | None = None):
     return image
 
 
-def test_web_adapter_declares_untested_version_matrix_and_quickstart() -> None:
-    """Bundling declares its exact target without claiming verification."""
+def test_web_adapter_declares_verified_version_matrix_and_quickstart() -> None:
+    """The qualified bundle declares its exact verified browser target."""
     manifest = get_web_manifest()
 
-    assert WEB_STATUS == "untested"
+    assert WEB_STATUS == "verified"
     assert manifest == {
         "plugin_id": PLUGIN_ID,
         "plugin_version": __version__,
-        "web_status": "untested",
+        "web_status": "verified",
         "datalab_web_version": "0.8.0",
         "pyodide_version": "0.26.4",
         "recipe_id": RELATIVE_DN_RECIPE.recipe_id,

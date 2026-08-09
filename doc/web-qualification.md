@@ -48,5 +48,6 @@ unbounded working set.
 This gate qualifies browser distribution, execution, host commit, visible
 rendering, and demo-workspace memory. It does not establish EMVA 1288
 compliance, calibrated metrology, scientific validation on real cameras, or a
-general-purpose Applications user experience. Advancing `web_status` from
-`untested` to `verified` remains a separate reviewed manifest change.
+general-purpose Applications user experience. After this evidence was
+recorded, a separate reviewed manifest change advanced `web_status` from
+`untested` to `verified`; that status applies only to the version matrix above.
