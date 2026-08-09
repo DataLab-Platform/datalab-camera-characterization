@@ -16,3 +16,5 @@ All notable changes to this project will be documented in this file.
   synthetic truth, with additional invalid-campaign coverage.
 - Add a reproducible 2048 x 2048 time and incremental-memory benchmark, and
   avoid retaining per-pixel statistics for every exposure level.
+- Add a thin Desktop adapter for editing the declared relative-DN `DataSet`;
+  input-role assignment and recipe launch remain a separate UI step.

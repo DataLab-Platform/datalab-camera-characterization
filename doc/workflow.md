@@ -70,6 +70,12 @@ and images transactionally, and stores the same `RecipeRunRecord` on every
 output. That record provides campaign-level input/output UUID provenance;
 workspace mutation and rollback remain host responsibilities.
 
+The Desktop adapter constructs and edits the descriptor's
+`CameraRecipeParameters` with the DataLab main window as dialog parent. This
+parameter form is reusable by the future run action; selecting images and
+assigning them to `dark_frames` or `flat_frames` remains outside the headless
+recipe contract.
+
 ## Memory Scope
 
 The workflow passes sequences of existing 2D image arrays to the core instead
