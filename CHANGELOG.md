@@ -29,3 +29,6 @@ All notable changes to this project will be documented in this file.
 - Add relative DSNU/PRNU maps, candidate pixels, row and column profiles,
   distributions, spatial metrics, synthetic truth checks, and persistence
   coverage while preserving the existing Alpha memory ceiling.
+- Add the thin DataLab-Web adapter, an explicit compatibility manifest,
+  packaged quickstart byte access, and metadata-based browser input mapping;
+  Web support remains `untested` pending visible and memory qualification.

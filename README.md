@@ -22,8 +22,8 @@ core  <---  workflow  <---  adapters/desktop.py
 - `core` contains host-independent domain code.
 - `workflow` composes the core into headless recipes.
 - `adapters/desktop.py` is the DataLab Desktop plugin entry point.
-- `adapters/web.py` reserves the Web boundary and is currently marked
-  `unsupported`.
+- `adapters/web.py` is the thin DataLab-Web boundary and is currently marked
+  `untested`.
 
 `core` and `workflow` must not import Qt, DataLab GUI modules, Pyodide browser
 shims, or host adapters. Tests enforce this dependency direction.
@@ -117,6 +117,25 @@ distributions, and anchored metrics table without writing Python.
 Opening the example asks before replacing a non-empty workspace. The complete
 walkthrough and expected results are documented in
 [`doc/quickstart.md`](doc/quickstart.md).
+
+## DataLab Web Integration
+
+DataLab-Web 0.8.0 explicitly bundles the pure-Python Camera wheel and adds that
+local artifact to Pyodide's import path. The browser does not discover the
+Desktop entry point and does not download the plugin from a package index at
+runtime. The adapter declares the pinned DataLab-Web, Pyodide, plugin, and
+recipe versions through `get_web_manifest()`.
+
+The packaged `camera_quickstart.h5` is read with `importlib.resources` and
+passed to DataLab-Web's existing byte-based HDF5 workspace loader. Images
+imported through the browser use the same metadata contract as Desktop: images
+with `EXPOSURE_TIME_METADATA_KEY` are flat frames and the others are dark
+frames. Recipe execution delegates to the shared headless workflow.
+
+The status intentionally remains `untested`: wheel import, resource access,
+and HDF5 loading are covered in a real Pyodide browser, but visible rendering
+of the curve, maps, and table and the Pyodide memory budget are separate
+qualification gates.
 
 ## Alpha Gate
 
