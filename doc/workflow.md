@@ -33,25 +33,34 @@ saturation, and the number of usable levels before calculating outputs.
 
 `CameraRecipeParameters` exposes minimum frame and flat-level counts,
 saturation level and warning fraction, an optional temporal-variance warning
-threshold, and the aggregation block size. A zero maximum temporal variance
-disables that optional warning threshold. These settings are workflow criteria,
-not normative camera acceptance limits.
+threshold, the aggregation block size, a candidate-pixel sigma threshold, and
+the spatial histogram bin count. A zero maximum temporal variance disables
+that optional warning threshold. These settings are workflow criteria, not
+normative camera acceptance limits.
 
 ## Outcome
 
-The recipe produces three named scientific objects:
+Recipe version 1.1.0 produces ten named scientific objects:
 
 | Output ID | Type | Meaning |
 | --- | --- | --- |
 | `response` | Signal | Mean dark-subtracted signal versus exposure; anchor object |
 | `mean_dark` | Image | Mean of all dark frames |
 | `mean_flat` | Image | Mean of the highest-exposure level retained by the linear fit |
+| `dsnu_like_map` | Image | Centered mean dark image in DN |
+| `prnu_like_map` | Image | Fractional deviation of the dark-corrected flat image |
+| `candidate_pixel_map` | Image | Union of pixels beyond either spatial sigma threshold |
+| `prnu_row_profile` | Signal | Row means of the PRNU-like map |
+| `prnu_column_profile` | Signal | Column means of the PRNU-like map |
+| `dsnu_distribution` | Signal | DSNU-like histogram counts versus DN |
+| `prnu_distribution` | Signal | PRNU-like histogram counts versus fractional deviation |
 
 The `metrics` result is a non-normative `TableResult` whose `anchor_id` is
 `response`. It includes response slope and intercept, dark temporal noise,
 maximum absolute fitted residual, maximum unsaturated signal, relative dynamic
-range, selected flat exposure, and saturation onset when detected. Every status
-is initially `Not assessed`; no implicit pass/fail standard is claimed.
+range, selected flat exposure, spatial non-uniformities, candidate count and
+fraction, and saturation onset when detected. Every status is initially `Not
+assessed`; no implicit pass/fail standard is claimed.
 Each row uses Sigima's explicit `NO_ROI` marker because the metrics summarize
 the full campaign rather than one ROI. This representation also remains
 unambiguous through DataLab's native HDF5 metadata serialization.
@@ -59,7 +68,9 @@ unambiguous through DataLab's native HDF5 metadata serialization.
 Mean images preserve the source coordinate calibration, axis labels, and units.
 They deliberately do not copy acquisition-specific metadata from an arbitrary
 input frame. Stable output-role metadata identifies computed objects. The
-selected flat exposure is recorded on `mean_flat`.
+selected flat exposure is recorded on `mean_flat`. Candidate-threshold metadata
+is recorded on `candidate_pixel_map`. Profiles use the source image's physical
+row or column coordinates.
 
 ## Diagnostics And Commit
 
@@ -115,7 +126,7 @@ size and deterministic SHA-256 are checked from that installed target.
 A Desktop lifecycle test verifies that hot reload replaces the plugin instance
 while retaining exactly one Camera menu and an enabled quickstart action in an
 empty workspace. A native HDF5 round-trip then verifies all quickstart input
-UUIDs, the three output UUIDs, each shared `RecipeRunRecord`, and the metrics
+UUIDs, all ten output UUIDs, each shared `RecipeRunRecord`, and the metrics
 table attached to the response anchor.
 
 ## Memory Scope
@@ -123,6 +134,7 @@ table attached to the response anchor.
 The workflow passes sequences of existing 2D image arrays to the core instead
 of building complete 3D stacks. Value scans, float conversion, saturation
 masks, and statistics materialize at most `aggregation_block_size` frames at a
-time. The input `ImageObj` arrays and 2D result arrays remain resident.
+time. Retained mean images use the mean-only core path. The input `ImageObj`
+arrays and 2D result maps remain resident.
 Representative 2048 x 2048 memory/time measurements are documented in
 [`validation.md`](validation.md).

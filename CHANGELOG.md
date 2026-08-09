@@ -26,3 +26,6 @@ All notable changes to this project will be documented in this file.
   persistence of Camera UUIDs, provenance, and anchored metrics.
 - Add an executable relative-DN Alpha gate covering synthetic reliability,
   complete Desktop quickstart UX, and a measured traced/RSS memory ceiling.
+- Add relative DSNU/PRNU maps, candidate pixels, row and column profiles,
+  distributions, spatial metrics, synthetic truth checks, and persistence
+  coverage while preserving the existing Alpha memory ceiling.

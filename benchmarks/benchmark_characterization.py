@@ -18,7 +18,11 @@ import psutil
 from datalab_camera_characterization.core import (
     CameraExposureSeries,
     CameraValidationParameters,
+    RelativeCameraCharacterization,
+    RelativeSpatialCharacterization,
     characterize_relative_dn,
+    characterize_spatial_dn,
+    compute_image_stack_mean,
 )
 
 
@@ -115,6 +119,42 @@ def _build_campaign(
     return dark, flats
 
 
+def _run_pipeline(
+    dark: Sequence[np.ndarray],
+    flats: Sequence[CameraExposureSeries],
+    parameters: CameraValidationParameters,
+    block_size: int,
+) -> tuple[
+    RelativeCameraCharacterization,
+    np.ndarray,
+    np.ndarray,
+    RelativeSpatialCharacterization,
+    np.ndarray,
+]:
+    """Run one temporal and spatial characterization with retained outputs."""
+    temporal_result = characterize_relative_dn(
+        dark,
+        flats,
+        parameters,
+        aggregation_block_size=block_size,
+    )
+    mean_dark_dn = compute_image_stack_mean(dark, block_size=block_size)
+    selected_flat_index = int(np.flatnonzero(temporal_result.linear_fit_mask)[-1])
+    mean_flat_dn = compute_image_stack_mean(
+        flats[selected_flat_index].frames_dn,
+        block_size=block_size,
+    )
+    spatial_result = characterize_spatial_dn(mean_dark_dn, mean_flat_dn)
+    candidate_display_map = spatial_result.candidate_pixel_mask.astype(np.uint8)
+    return (
+        temporal_result,
+        mean_dark_dn,
+        mean_flat_dn,
+        spatial_result,
+        candidate_display_map,
+    )
+
+
 def run_benchmark(configuration: BenchmarkConfiguration) -> dict[str, object]:
     """Run the benchmark and return a machine-readable measurement report."""
     dark, flats = _build_campaign(configuration)
@@ -132,19 +172,24 @@ def run_benchmark(configuration: BenchmarkConfiguration) -> dict[str, object]:
     baseline_bytes = tracemalloc.get_traced_memory()[0]
     rss_sampler.start()
     started_at = time.perf_counter()
+    pipeline_result = None
     try:
         for _ in range(configuration.repetitions):
-            result = characterize_relative_dn(
+            pipeline_result = None
+            pipeline_result = _run_pipeline(
                 dark,
                 flats,
                 parameters,
-                aggregation_block_size=configuration.block_size,
+                configuration.block_size,
             )
         elapsed_s = time.perf_counter() - started_at
         _, peak_bytes = tracemalloc.get_traced_memory()
     finally:
         tracemalloc.stop()
         rss_sampler.stop()
+
+    assert pipeline_result is not None
+    temporal_result, _, _, spatial_result, _ = pipeline_result
 
     pixel_frames = configuration.height * configuration.width * input_frame_count
     return {
@@ -169,7 +214,12 @@ def run_benchmark(configuration: BenchmarkConfiguration) -> dict[str, object]:
         "memory_measurement": (
             "tracemalloc and sampled process RSS peaks after resident source allocation"
         ),
-        "response_slope_dn_per_s": result.linear_fit_slope_dn_per_s,
+        "response_slope_dn_per_s": temporal_result.linear_fit_slope_dn_per_s,
+        "dark_nonuniformity_dn": spatial_result.dark_nonuniformity_dn,
+        "flat_field_nonuniformity_fraction": (
+            spatial_result.flat_field_nonuniformity_fraction
+        ),
+        "candidate_pixel_count": spatial_result.candidate_pixel_count,
     }
 
 

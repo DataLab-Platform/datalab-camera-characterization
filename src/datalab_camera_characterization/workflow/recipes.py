@@ -16,10 +16,10 @@ RELATIVE_DN_RECIPE = RecipeDescriptor(
     recipe_id=f"{PLUGIN_ID}:relative-dn-characterization",
     plugin_version=__version__,
     title="Relative Camera characterization",
-    version="1.0.0",
+    version="1.1.0",
     description=(
         "Characterize dark and uniform-illumination image series with relative "
-        "metrics in digital numbers."
+        "temporal and spatial metrics in digital numbers."
     ),
     inputs=(
         RecipeInputSlot(

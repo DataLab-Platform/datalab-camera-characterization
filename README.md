@@ -4,10 +4,11 @@ Headless workflows and DataLab adapters for relative characterization of
 scientific cameras and detectors.
 
 This repository currently provides a deterministic synthetic camera model,
-structured input diagnostics, relative characterization metrics in DN, and a
-headless DataLab recipe producing a response curve, useful mean images, and an
-anchored metric table. It does not claim EMVA 1288 compliance; calibrated or
-normative capabilities require dedicated scientific validation.
+structured input diagnostics, relative temporal and spatial characterization
+in DN, and a headless DataLab recipe producing curves, maps, profiles,
+distributions, candidate pixels, and an anchored metric table. It does not
+claim EMVA 1288 compliance; calibrated or normative capabilities require
+dedicated scientific validation.
 
 ## Architecture
 
@@ -94,6 +95,11 @@ The recipe returns:
 - `response`: the response curve and anchor object;
 - `mean_dark`: the mean dark image;
 - `mean_flat`: the last unsaturated mean flat image;
+- `dsnu_like_map`: the centered mean dark image in DN;
+- `prnu_like_map`: the normalized dark-corrected flat image;
+- `candidate_pixel_map`: pixels exceeding the configured relative threshold;
+- row and column PRNU-like profiles;
+- DSNU-like and PRNU-like distributions;
 - `metrics`: a non-normative `TableResult` attached to `response`.
 
 See [`doc/workflow.md`](doc/workflow.md) for the input, parameter, diagnostic,
@@ -105,8 +111,8 @@ After installing the plugin, choose **Plugins > Camera & Detector
 Characterization > Open quickstart example**. DataLab loads and selects a
 packaged synthetic campaign containing four dark frames and four flat exposure
 levels. Then choose **Run camera characterization...** and accept the explicit
-role and parameter forms to obtain the response curve, mean images, and
-anchored metrics table without writing Python.
+role and parameter forms to obtain the response curve, spatial maps, profiles,
+distributions, and anchored metrics table without writing Python.
 
 Opening the example asks before replacing a non-empty workspace. The complete
 walkthrough and expected results are documented in

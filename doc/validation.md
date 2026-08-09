@@ -39,6 +39,11 @@ from the fit while identifying the expected saturation onset. These tolerances
 are wider than the deterministic reference error but narrow enough to reject
 unit, gain, dark-subtraction, fit-mask, and noise-definition mistakes.
 
+A separate deterministic no-noise campaign compares the recovered DSNU-like
+and PRNU-like maps with the simulator's static DSNU and PRNU truth maps. Its
+tolerances cover ADC quantization while rejecting sign, centering,
+dark-correction, and normalization errors.
+
 ## Invalid Campaigns
 
 The automated matrix covers missing series, too few acquisitions or levels,
@@ -72,8 +77,9 @@ python -m benchmarks.benchmark_characterization
 
 The default campaign contains 16 resident contiguous `uint16` images: one
 dark and three flat series, four 2048 x 2048 frames per series. The source
-arrays occupy 128 MiB. Timing covers the complete `characterize_relative_dn`
-pipeline. `tracemalloc` starts only after source allocation, so
+arrays occupy 128 MiB. Timing covers temporal characterization, retained mean
+images, spatial maps, profiles, histograms, and the candidate display map.
+`tracemalloc` starts only after source allocation, so
 `peak_incremental_bytes` measures traced Python and NumPy allocations added by
 validation and characterization. The JSON report records all parameters and
 runtime versions. The benchmark harness reports evidence without deciding
@@ -83,8 +89,8 @@ A reference run on Windows with CPython 3.9.10 and NumPy 2.0.2 produced:
 
 | Block size | Time | Input throughput | Incremental peak |
 | ---: | ---: | ---: | ---: |
-| 1 | 2.545 s | 26.37 MP-frames/s | 264.0 MiB |
-| 2 | 1.743 s | 38.50 MP-frames/s | 336.0 MiB |
+| 1 | 2.974 s | 22.57 MP-frames/s | 264.04 MiB |
+| 2 | 2.260 s | 29.69 MP-frames/s | 336.08 MiB |
 
 The numbers are single-run observations on one host, not portable acceptance
 limits. They demonstrate the expected speed-memory tradeoff and provide a
@@ -106,3 +112,9 @@ peaks must remain at or below 384 MiB for this fixed campaign. The independently
 executed gate then passed at 336.06 MiB traced and 336.78 MiB RSS. This budget
 is intentionally local to the defined campaign; elapsed time has no pass/fail
 limit. See [`alpha-gate.md`](alpha-gate.md) for the complete gate and scope.
+
+After spatial outputs were added, the same three-run protocol measured 336.08
+MiB traced and 337.00 MiB RSS (`2.63 x` input). The benchmark releases one
+run's outputs before starting the next, while retaining every scientific output
+for the duration of each run. The original 384 MiB ceiling therefore remains
+unchanged.

@@ -17,19 +17,28 @@ from datalab.recipes import (
     RecipeResultOutput,
     RecipeValidationError,
 )
-from sigima.objects import NO_ROI, ImageObj, TableResult, create_image, create_signal
+from sigima.objects import (
+    NO_ROI,
+    ImageObj,
+    SignalObj,
+    TableResult,
+    create_image,
+    create_signal,
+)
 
 from ..core import (
     CameraExposureSeries,
     CameraValidationParameters,
     ImageStackSource,
     characterize_relative_dn,
-    compute_image_stack_statistics,
+    characterize_spatial_dn,
+    compute_image_stack_mean,
     metadata_key,
 )
 
 EXPOSURE_TIME_METADATA_KEY = metadata_key("exposure_time_s")
 OUTPUT_ROLE_METADATA_KEY = metadata_key("output_role")
+CANDIDATE_THRESHOLD_METADATA_KEY = metadata_key("candidate_threshold_sigma")
 
 
 class CameraRecipeParameters(gds.DataSet):
@@ -65,6 +74,16 @@ class CameraRecipeParameters(gds.DataSet):
         "Aggregation block size",
         default=1,
         min=1,
+    )
+    candidate_threshold_sigma = gds.FloatItem(
+        "Candidate pixel threshold (sigma)",
+        default=5.0,
+        min=1e-12,
+    )
+    spatial_histogram_bin_count = gds.IntItem(
+        "Spatial histogram bins",
+        default=64,
+        min=2,
     )
 
     def to_validation_parameters(self) -> CameraValidationParameters:
@@ -139,24 +158,29 @@ def _group_flat_images(
     return tuple(series), tuple(image_groups)
 
 
-def _mean_image(
+def _image_output(
     template: ImageObj,
-    frames: ImageStackSource,
+    data: np.ndarray,
     title: str,
     role: str,
-    block_size: int,
+    *,
+    zunit: str | None = None,
+    zlabel: str | None = None,
 ) -> ImageObj:
-    """Create one geometry-preserving mean image output."""
-    mean_data = compute_image_stack_statistics(
-        frames,
-        block_size=block_size,
-        ddof=1,
-    ).mean.copy()
+    """Create one geometry-preserving image output."""
     output = create_image(
         title,
-        mean_data,
-        units=(template.xunit, template.yunit, template.zunit),
-        labels=(template.xlabel, template.ylabel, template.zlabel),
+        data,
+        units=(
+            template.xunit,
+            template.yunit,
+            template.zunit if zunit is None else zunit,
+        ),
+        labels=(
+            template.xlabel,
+            template.ylabel,
+            template.zlabel if zlabel is None else zlabel,
+        ),
     )
     if template.is_uniform_coords:
         output.set_uniform_coords(template.dx, template.dy, template.x0, template.y0)
@@ -166,7 +190,58 @@ def _mean_image(
     return output
 
 
-def _metrics_table(result, selected_flat_exposure_s: float) -> TableResult:
+def _mean_image(
+    template: ImageObj,
+    frames: ImageStackSource,
+    title: str,
+    role: str,
+    block_size: int,
+) -> ImageObj:
+    """Create one geometry-preserving mean image output."""
+    mean_data = compute_image_stack_mean(
+        frames,
+        block_size=block_size,
+    )
+    return _image_output(template, mean_data, title, role)
+
+
+def _axis_coordinates(image: ImageObj, axis: int) -> np.ndarray:
+    """Return physical row or column coordinates for an image."""
+    if axis == 0:
+        if image.is_uniform_coords:
+            return image.y0 + image.dy * np.arange(image.data.shape[0])
+        return image.ycoords.copy()
+    if image.is_uniform_coords:
+        return image.x0 + image.dx * np.arange(image.data.shape[1])
+    return image.xcoords.copy()
+
+
+def _signal_output(
+    title: str,
+    x: np.ndarray,
+    y: np.ndarray,
+    role: str,
+    *,
+    units: tuple[str, str],
+    labels: tuple[str, str],
+) -> SignalObj:
+    """Create one signal output with stable role metadata."""
+    output = create_signal(title, x, y, units=units, labels=labels)
+    output.metadata[OUTPUT_ROLE_METADATA_KEY] = role
+    return output
+
+
+def _histogram_centers(edges: np.ndarray) -> np.ndarray:
+    """Return bin centers for one histogram edge array."""
+    return 0.5 * (edges[:-1] + edges[1:])
+
+
+def _metrics_table(
+    result,
+    spatial_result,
+    selected_flat_exposure_s: float,
+    candidate_threshold_sigma: float,
+) -> TableResult:
     """Build a non-normative summary table for the response anchor."""
     fitted_residuals = result.linearity_residuals_dn[result.linear_fit_mask]
     rows: list[list[object]] = [
@@ -191,6 +266,30 @@ def _metrics_table(result, selected_flat_exposure_s: float) -> TableResult:
             "ratio",
             "Not assessed",
         ],
+        [
+            "Dark spatial non-uniformity",
+            spatial_result.dark_nonuniformity_dn,
+            "DN",
+            "Not assessed",
+        ],
+        [
+            "Flat-field spatial non-uniformity",
+            100.0 * spatial_result.flat_field_nonuniformity_fraction,
+            "%",
+            "Not assessed",
+        ],
+        [
+            "Candidate pixels",
+            spatial_result.candidate_pixel_count,
+            "pixel",
+            "Not assessed",
+        ],
+        [
+            "Candidate pixel fraction",
+            1e6 * spatial_result.candidate_pixel_fraction,
+            "ppm",
+            "Not assessed",
+        ],
         ["Mean flat exposure", selected_flat_exposure_s, "s", "Not assessed"],
     ]
     if result.saturation_onset_exposure_s is not None:
@@ -212,6 +311,7 @@ def _metrics_table(result, selected_flat_exposure_s: float) -> TableResult:
             "measurement_domain": "relative_dn",
             "normative": False,
             "selected_flat_exposure_s": selected_flat_exposure_s,
+            "candidate_threshold_sigma": candidate_threshold_sigma,
         },
     )
 
@@ -280,6 +380,78 @@ def run_relative_dn_characterization(
     mean_flat.metadata[EXPOSURE_TIME_METADATA_KEY] = (
         selected_flat_series.exposure_time_s
     )
+    context.report_progress(0.8, "Building Camera spatial outputs")
+    context.raise_if_cancelled()
+
+    try:
+        spatial_result = characterize_spatial_dn(
+            mean_dark.data,
+            mean_flat.data,
+            candidate_threshold_sigma=float(parameters.candidate_threshold_sigma),
+            histogram_bin_count=int(parameters.spatial_histogram_bin_count),
+        )
+    except ValueError as error:
+        raise RecipeValidationError(str(error)) from error
+    dsnu_like_map = _image_output(
+        mean_dark,
+        spatial_result.dsnu_like_map_dn,
+        "Relative DSNU-like map",
+        "dsnu_like_map",
+        zunit="DN",
+        zlabel="Dark offset",
+    )
+    prnu_like_map = _image_output(
+        mean_flat,
+        spatial_result.prnu_like_map_fraction,
+        "Relative PRNU-like map",
+        "prnu_like_map",
+        zunit="",
+        zlabel="Relative response",
+    )
+    candidate_pixel_map = _image_output(
+        mean_flat,
+        spatial_result.candidate_pixel_mask.astype(np.uint8),
+        "Candidate pixel map",
+        "candidate_pixel_map",
+        zunit="",
+        zlabel="Candidate",
+    )
+    candidate_pixel_map.metadata[CANDIDATE_THRESHOLD_METADATA_KEY] = float(
+        parameters.candidate_threshold_sigma
+    )
+
+    prnu_row_profile = _signal_output(
+        "PRNU-like row profile",
+        _axis_coordinates(mean_flat, 0),
+        spatial_result.row_profile_fraction,
+        "prnu_row_profile",
+        units=(mean_flat.yunit, ""),
+        labels=(mean_flat.ylabel or "Y", "Relative response"),
+    )
+    prnu_column_profile = _signal_output(
+        "PRNU-like column profile",
+        _axis_coordinates(mean_flat, 1),
+        spatial_result.column_profile_fraction,
+        "prnu_column_profile",
+        units=(mean_flat.xunit, ""),
+        labels=(mean_flat.xlabel or "X", "Relative response"),
+    )
+    dsnu_distribution = _signal_output(
+        "DSNU-like distribution",
+        _histogram_centers(spatial_result.dsnu_histogram_bin_edges_dn),
+        spatial_result.dsnu_histogram_counts,
+        "dsnu_distribution",
+        units=("DN", ""),
+        labels=("Dark offset", "Pixel count"),
+    )
+    prnu_distribution = _signal_output(
+        "PRNU-like distribution",
+        _histogram_centers(spatial_result.prnu_histogram_bin_edges_fraction),
+        spatial_result.prnu_histogram_counts,
+        "prnu_distribution",
+        units=("", ""),
+        labels=("Relative response", "Pixel count"),
+    )
 
     diagnostics = tuple(
         RecipeDiagnostic(
@@ -290,13 +462,25 @@ def run_relative_dn_characterization(
         )
         for diagnostic in result.validation.warnings
     )
-    metrics = _metrics_table(result, selected_flat_series.exposure_time_s)
+    metrics = _metrics_table(
+        result,
+        spatial_result,
+        selected_flat_series.exposure_time_s,
+        float(parameters.candidate_threshold_sigma),
+    )
     context.report_progress(1.0, "Camera characterization complete")
     return RecipeOutcome(
         objects=(
             RecipeObjectOutput("response", response),
             RecipeObjectOutput("mean_dark", mean_dark),
             RecipeObjectOutput("mean_flat", mean_flat),
+            RecipeObjectOutput("dsnu_like_map", dsnu_like_map),
+            RecipeObjectOutput("prnu_like_map", prnu_like_map),
+            RecipeObjectOutput("candidate_pixel_map", candidate_pixel_map),
+            RecipeObjectOutput("prnu_row_profile", prnu_row_profile),
+            RecipeObjectOutput("prnu_column_profile", prnu_column_profile),
+            RecipeObjectOutput("dsnu_distribution", dsnu_distribution),
+            RecipeObjectOutput("prnu_distribution", prnu_distribution),
         ),
         results=(RecipeResultOutput("metrics", metrics, anchor_id="response"),),
         diagnostics=diagnostics,
@@ -305,6 +489,7 @@ def run_relative_dn_characterization(
 
 __all__ = [
     "CameraRecipeParameters",
+    "CANDIDATE_THRESHOLD_METADATA_KEY",
     "EXPOSURE_TIME_METADATA_KEY",
     "OUTPUT_ROLE_METADATA_KEY",
     "run_relative_dn_characterization",

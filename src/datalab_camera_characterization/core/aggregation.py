@@ -327,9 +327,35 @@ def compute_image_stack_statistics(
     return accumulator.finalize(ddof)
 
 
+def compute_image_stack_mean(
+    frames: ImageStackSource,
+    *,
+    block_size: int = 1,
+) -> np.ndarray:
+    """Compute a read-only per-pixel mean without a variance accumulator.
+
+    Args:
+        frames: 3D image stack or sequence of 2D frame arrays
+        block_size: Maximum number of frames scanned together
+
+    Returns:
+        Read-only float64 per-pixel mean
+    """
+    _validate_positive_integer(block_size, "Block size")
+    description = _describe_image_stack(frames)
+    mean = np.zeros(description.spatial_shape, dtype=np.float64)
+    for block in _iter_image_stack_blocks(frames, block_size):
+        _validate_block_values(block)
+        for frame in block:
+            np.add(mean, frame, out=mean)
+    mean /= description.frame_count
+    return _readonly(mean)
+
+
 __all__ = [
     "ImageStackAccumulator",
     "ImageStackSource",
     "ImageStackStatistics",
+    "compute_image_stack_mean",
     "compute_image_stack_statistics",
 ]

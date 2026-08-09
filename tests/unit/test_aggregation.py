@@ -6,6 +6,7 @@ import pytest
 import datalab_camera_characterization.core.aggregation as aggregation
 from datalab_camera_characterization.core import (
     ImageStackAccumulator,
+    compute_image_stack_mean,
     compute_image_stack_statistics,
 )
 
@@ -71,6 +72,23 @@ def test_frame_sequence_matches_equivalent_ndarray_stack() -> None:
     np.testing.assert_allclose(sequence_result.mean, stack_result.mean)
     np.testing.assert_allclose(sequence_result.variance, stack_result.variance)
     assert sequence_result.count == stack_result.count
+
+
+@pytest.mark.parametrize("block_size", [1, 3, 8, 32])
+def test_mean_only_aggregation_matches_numpy(block_size: int) -> None:
+    """Retained mean images do not require a per-pixel variance map."""
+    frames = np.random.default_rng(17).integers(
+        0,
+        4_096,
+        size=(11, 8, 7),
+        dtype=np.uint16,
+    )
+
+    result = compute_image_stack_mean(tuple(frames), block_size=block_size)
+
+    np.testing.assert_allclose(result, np.mean(frames, axis=0), atol=1e-12)
+    assert result.dtype == np.float64
+    assert not result.flags.writeable
 
 
 @pytest.mark.parametrize("block_size", [1, 3, 8, 32])

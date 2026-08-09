@@ -70,6 +70,33 @@ When a measured noise is zero, the corresponding relative SNR or dynamic range
 is represented as positive infinity rather than hidden or replaced by an
 arbitrary finite value.
 
+## Spatial Definitions
+
+The spatial calculation uses the mean dark image `D` and one selected mean
+flat image `F`. The selected flat is the highest-exposure level retained by
+the temporal linear fit. The DSNU-like map is expressed in DN:
+
+```text
+dsnu_like_dn = D - mean_pixels(D)
+```
+
+The PRNU-like map is the fractional deviation of the dark-corrected flat:
+
+```text
+flat_signal_dn = F - D
+prnu_like_fraction = flat_signal_dn / mean_pixels(flat_signal_dn) - 1
+```
+
+The mean dark-corrected flat signal must be positive. Dark and flat spatial
+non-uniformity metrics are the sample standard deviations (`ddof=1`) of these
+maps. Row and column profiles are means of the PRNU-like map along the other
+axis. Histograms contain every map pixel.
+
+A candidate pixel exceeds the configured absolute sigma threshold in either
+map. Zero-variance maps contribute no candidates. This union is a screening
+aid, not a defect classification or acceptance standard; the threshold and
+relative formulas are explicit because no EMVA compliance is claimed.
+
 ## Memory Scope
 
 Mean and variance use a per-pixel parallel Chan/Welford accumulator. For an
@@ -89,6 +116,11 @@ sample_variance = merged_M2 / (N + n - 1)
 blocks when the data source can stream them. The convenience API accepts a 3D
 array or a sequence of 2D arrays. Results contain read-only per-pixel mean and
 variance arrays.
+
+Mean images retained as recipe outputs use a dedicated mean-only aggregator.
+It scans at most one configured block at a time and accumulates into one
+float64 image, avoiding an unused full-size variance map and an extra output
+copy.
 
 `validate_camera_inputs` and `characterize_relative_dn` accept the keyword-only
 `aggregation_block_size`. The default is one frame, minimizing transient

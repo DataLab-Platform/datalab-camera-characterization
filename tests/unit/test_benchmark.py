@@ -40,6 +40,9 @@ def test_small_benchmark_reports_campaign_time_and_memory() -> None:
     assert report["peak_rss_bytes"] >= report["baseline_rss_bytes"]
     assert report["peak_incremental_rss_bytes"] >= 0
     assert report["response_slope_dn_per_s"] == pytest.approx(800.0)
+    assert report["dark_nonuniformity_dn"] == 0.0
+    assert report["flat_field_nonuniformity_fraction"] == 0.0
+    assert report["candidate_pixel_count"] == 0
 
 
 def test_benchmark_stops_memory_instrumentation_on_failure(

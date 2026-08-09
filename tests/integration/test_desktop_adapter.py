@@ -47,6 +47,7 @@ def test_plugin_descriptor() -> None:
     assert CAMERA_QUICKSTART.recipe_id == RELATIVE_DN_RECIPE.recipe_id
     assert RELATIVE_DN_RECIPE.plugin_id == PLUGIN_ID
     assert RELATIVE_DN_RECIPE.plugin_version == "0.1.0"
+    assert RELATIVE_DN_RECIPE.version == "1.1.0"
     assert RELATIVE_DN_RECIPE.parameter_class is CameraRecipeParameters
 
 
@@ -285,8 +286,8 @@ def test_desktop_action_assigns_selection_and_commits_cross_panel_outputs(
         assert plugin.run_relative_dn_action.isEnabled()
         plugin.run_relative_dn_action.trigger()
 
-        assert len(window.signalpanel) == 1
-        assert len(window.imagepanel) == len(selected_images) + 2
+        assert len(window.signalpanel) == 5
+        assert len(window.imagepanel) == len(selected_images) + 5
         response = window.signalpanel[1]
         tables = list(TableAdapter.iterate_from_obj(response))
         assert len(tables) == 1
@@ -348,8 +349,18 @@ def test_desktop_quickstart_action_opens_and_runs_packaged_example(
 
         assert not warnings
         assert not errors
-        assert len(window.signalpanel) == 1
-        assert len(window.imagepanel) == 22
+        assert len(window.signalpanel) == 5
+        assert len(window.imagepanel) == 25
+        output_image_titles = {
+            image.title for image in window.imagepanel.objmodel.get_all_objects()[20:]
+        }
+        assert output_image_titles == {
+            "Mean dark image",
+            "Mean flat image (0.04 s)",
+            "Relative DSNU-like map",
+            "Relative PRNU-like map",
+            "Candidate pixel map",
+        }
         response = window.signalpanel[1]
         tables = list(TableAdapter.iterate_from_obj(response))
         assert len(tables) == 1
@@ -456,8 +467,8 @@ def test_recipe_runner_commits_camera_outputs_and_anchored_table() -> None:
             parameters,
         )
 
-        assert len(window.signalpanel) == 1
-        assert len(window.imagepanel) == 2
+        assert len(window.signalpanel) == 5
+        assert len(window.imagepanel) == 5
         response = outcome.objects[0].value
         tables = list(TableAdapter.iterate_from_obj(response))
         assert len(tables) == 1
@@ -468,10 +479,17 @@ def test_recipe_runner_commits_camera_outputs_and_anchored_table() -> None:
             )
             for output in outcome.objects
         ]
-        assert records[0] == records[1] == records[2]
+        assert all(record == records[0] for record in records[1:])
         assert records[0].recipe_id == RELATIVE_DN_RECIPE.recipe_id
         assert set(records[0].output_uuids) == {
             "response",
             "mean_dark",
             "mean_flat",
+            "dsnu_like_map",
+            "prnu_like_map",
+            "candidate_pixel_map",
+            "prnu_row_profile",
+            "prnu_column_profile",
+            "dsnu_distribution",
+            "prnu_distribution",
         }

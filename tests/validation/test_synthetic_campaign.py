@@ -12,6 +12,7 @@ from datalab_camera_characterization.core import (
     CameraSimulationParameters,
     CameraValidationParameters,
     characterize_relative_dn,
+    characterize_spatial_dn,
     simulate_camera_frames,
     validate_camera_inputs,
 )
@@ -104,6 +105,51 @@ def test_relative_characterization_recovers_synthetic_camera_truth() -> None:
     )
     assert result.saturation_onset_exposure_s == 20.0
     assert result.saturation_onset_signal_dn == pytest.approx(3_895.0, abs=0.2)
+
+
+def test_spatial_characterization_recovers_static_synthetic_maps() -> None:
+    """Relative DSNU/PRNU maps recover deterministic simulator ground truth."""
+    dark_parameters = CameraSimulationParameters(
+        shape=SHAPE,
+        frame_count=4,
+        exposure_time_s=0.0,
+        signal_electrons=0.0,
+        offset_dn=200.0,
+        conversion_gain_e_per_dn=2.0,
+        read_noise_e=0.0,
+        dark_current_e_per_s=0.0,
+        prnu_fraction=0.02,
+        dsnu_dn=1.5,
+        saturation_dn=4_095.0,
+        bit_depth=12,
+        shot_noise=False,
+        seed=202,
+    )
+    flat_parameters = CameraSimulationParameters(
+        **{
+            **dark_parameters.__dict__,
+            "exposure_time_s": 1.0,
+            "signal_electrons": 2_000.0,
+        }
+    )
+    dark = simulate_camera_frames(dark_parameters)
+    flat = simulate_camera_frames(flat_parameters)
+
+    result = characterize_spatial_dn(
+        np.mean(dark.frames_dn, axis=0),
+        np.mean(flat.frames_dn, axis=0),
+    )
+
+    expected_dsnu_map = dark.truth.dsnu_map_dn - np.mean(dark.truth.dsnu_map_dn)
+    expected_prnu_map = (
+        flat.truth.prnu_gain_map / np.mean(flat.truth.prnu_gain_map) - 1.0
+    )
+    np.testing.assert_allclose(result.dsnu_like_map_dn, expected_dsnu_map, atol=1.0)
+    np.testing.assert_allclose(
+        result.prnu_like_map_fraction,
+        expected_prnu_map,
+        atol=0.002,
+    )
 
 
 @pytest.mark.parametrize(
