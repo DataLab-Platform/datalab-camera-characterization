@@ -30,5 +30,8 @@ All notable changes to this project will be documented in this file.
   distributions, spatial metrics, synthetic truth checks, and persistence
   coverage while preserving the existing Alpha memory ceiling.
 - Add the thin DataLab-Web adapter, an explicit compatibility manifest,
-  packaged quickstart byte access, and metadata-based browser input mapping;
-  Web support remains `untested` pending visible and memory qualification.
+  packaged quickstart byte access, and metadata-based browser input mapping,
+  initially retaining the `untested` compatibility status.
+- Qualify the bundled recipe in Chromium/Pyodide with visible response-curve,
+  PRNU-map, and metrics-table assertions, transactional cross-panel commit,
+  persisted provenance, rollback coverage, and explicit memory budgets.

@@ -132,10 +132,12 @@ imported through the browser use the same metadata contract as Desktop: images
 with `EXPOSURE_TIME_METADATA_KEY` are flat frames and the others are dark
 frames. Recipe execution delegates to the shared headless workflow.
 
-The status intentionally remains `untested`: wheel import, resource access,
-and HDF5 loading are covered in a real Pyodide browser, but visible rendering
-of the curve, maps, and table and the Pyodide memory budget are separate
-qualification gates.
+A real Chromium/Pyodide qualification now executes the shared recipe and
+checks a visible response curve, PRNU-like map, and anchored metrics table. It
+also enforces incremental WASM-heap and retained-array budgets on the packaged
+campaign. The manifest intentionally remains `untested` until the compatibility
+status is advanced in a separate reviewed change. See
+[`doc/web-qualification.md`](doc/web-qualification.md).
 
 ## Alpha Gate
 
