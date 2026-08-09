@@ -1,5 +1,10 @@
 """Host-independent Camera characterization domain code."""
 
+from .aggregation import (
+    ImageStackAccumulator,
+    ImageStackStatistics,
+    compute_image_stack_statistics,
+)
 from .characterization import (
     CameraCharacterizationError,
     RelativeCameraCharacterization,
@@ -32,7 +37,10 @@ __all__ = [
     "CameraSimulationResult",
     "CameraSimulationTruth",
     "CameraValidationParameters",
+    "ImageStackAccumulator",
+    "ImageStackStatistics",
     "characterize_relative_dn",
+    "compute_image_stack_statistics",
     "metadata_key",
     "simulate_camera_frames",
     "validate_camera_inputs",

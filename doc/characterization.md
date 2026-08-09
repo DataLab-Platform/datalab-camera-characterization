@@ -71,7 +71,38 @@ arbitrary finite value.
 
 ## Memory Scope
 
-The current implementation converts and processes complete stacks in memory.
-It is the batch numerical reference for roadmap phase 2.5, which will introduce
-incremental or block mean/variance aggregation and prove equivalence against
-these results before making campaign-size or memory-budget claims.
+Mean and variance use a per-pixel parallel Chan/Welford accumulator. For an
+existing state with count `N`, mean `mean`, and sum of squared deviations `M2`,
+a block with corresponding values `n`, `block_mean`, and `block_M2` is merged
+as follows:
+
+```text
+delta = block_mean - mean
+merged_mean = mean + delta * n / (N + n)
+merged_M2 = M2 + block_M2 + delta**2 * N * n / (N + n)
+sample_variance = merged_M2 / (N + n - 1)
+```
+
+`compute_image_stack_statistics` exposes the block implementation directly.
+`ImageStackAccumulator` also accepts individual frames or caller-provided
+blocks when the data source can stream them. Results contain read-only
+per-pixel mean and variance arrays.
+
+`validate_camera_inputs` and `characterize_relative_dn` accept the keyword-only
+`aggregation_block_size`. The default is one frame, minimizing transient
+memory. A larger value trades additional temporary memory for fewer NumPy
+operations. Float conversion, finite-value scans, mean/variance temporaries,
+and saturation masks receive no more than that number of frames at once.
+
+For a stack shaped `(frames, height, width)` and block size `B`, temporary
+frame storage scales as `O(B * height * width)` and accumulator state scales as
+`O(height * width)`, independent of the total frame count. The APIs still
+receive existing NumPy stacks, so this bound applies to additional processing
+memory and does not remove the caller's input arrays from memory.
+
+Unit tests compare multiple block sizes, incomplete final blocks, integer data,
+and high-offset floating-point data against NumPy `mean` and `var(ddof=1)`.
+Equivalence is numerical within explicit floating-point tolerances, not a
+bit-for-bit promise across block sizes or NumPy versions. Representative 2048²
+memory/time measurements and campaign-size claims remain deferred to roadmap
+phase 2.7.

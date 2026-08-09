@@ -23,7 +23,10 @@ def _two_frame_stack(mean_dn: int, shape: tuple[int, int] = (2, 3)) -> np.ndarra
     )
 
 
-def test_linear_relative_characterization_has_exact_dn_metrics() -> None:
+@pytest.mark.parametrize("aggregation_block_size", [1, 2, 20])
+def test_linear_relative_characterization_has_exact_dn_metrics(
+    aggregation_block_size: int,
+) -> None:
     """A linear dataset yields exact response, noise, SNR, and residuals."""
     dark = _two_frame_stack(10)
     flats = tuple(
@@ -32,7 +35,12 @@ def test_linear_relative_characterization_has_exact_dn_metrics() -> None:
     )
     parameters = CameraValidationParameters(saturation_dn=100.0)
 
-    result = characterize_relative_dn(dark, flats, parameters)
+    result = characterize_relative_dn(
+        dark,
+        flats,
+        parameters,
+        aggregation_block_size=aggregation_block_size,
+    )
 
     np.testing.assert_array_equal(result.exposure_times_s, (1.0, 2.0, 3.0))
     np.testing.assert_array_equal(result.mean_signal_dn, (20.0, 40.0, 60.0))

@@ -15,6 +15,11 @@ algorithms.
 
 The repository provides package identity, namespaced metadata, a deterministic
 pure-NumPy camera simulator, structured dataset validation, batch reference
-characterization in DN, an empty recipe registry, and explicit Desktop/Web
-integration boundaries. Incremental aggregation and recipe outcomes are
-separate roadmap items and remain intentionally absent.
+tests, bounded-memory characterization in DN, an empty recipe registry, and
+explicit Desktop/Web integration boundaries. Recipe outcomes remain a separate
+roadmap item and are intentionally absent.
+
+Mean and variance are owned by `core/aggregation.py`. Validation and
+characterization call that module rather than implementing independent batch
+statistics. The accumulator accepts individual frames or blocks, while the
+convenience function slices an existing NumPy stack along its frame axis.

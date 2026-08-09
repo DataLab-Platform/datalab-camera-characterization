@@ -8,6 +8,7 @@ from collections.abc import Sequence
 
 import numpy as np
 
+from .aggregation import _fraction_at_or_above, compute_image_stack_statistics
 from .validation import (
     CameraExposureSeries,
     CameraInputValidation,
@@ -54,27 +55,20 @@ def _readonly(array: np.ndarray) -> np.ndarray:
     return array
 
 
-def _mean_temporal_variance(frames: np.ndarray) -> float:
-    """Return the spatial mean of unbiased per-pixel temporal variances."""
-    temporal_variance = np.var(frames.astype(float, copy=False), axis=0, ddof=1)
-    return float(np.mean(temporal_variance))
-
-
 def characterize_relative_dn(
     dark_frames_dn: np.ndarray | None,
     flat_series: Sequence[CameraExposureSeries] | None,
     validation_parameters: CameraValidationParameters | None = None,
+    *,
+    aggregation_block_size: int = 1,
 ) -> RelativeCameraCharacterization:
-    """Compute batch reference metrics after complete structured validation.
-
-    The implementation deliberately holds complete frame stacks in memory.
-    Phase 2.5 replaces mean and variance aggregation with a numerically
-    equivalent incremental or block implementation.
+    """Compute relative metrics with bounded mean and variance aggregation.
 
     Args:
         dark_frames_dn: Dark frame stack shaped ``(frames, height, width)``
         flat_series: Uniform-illumination stacks in increasing exposure order
         validation_parameters: Explicit validation and saturation thresholds
+        aggregation_block_size: Maximum frames converted to float together
 
     Returns:
         Relative response, temporal noise, SNR, saturation, and linearity data
@@ -84,30 +78,46 @@ def characterize_relative_dn(
          error
     """
     parameters = validation_parameters or CameraValidationParameters()
-    validation = validate_camera_inputs(dark_frames_dn, flat_series, parameters)
+    validation = validate_camera_inputs(
+        dark_frames_dn,
+        flat_series,
+        parameters,
+        aggregation_block_size=aggregation_block_size,
+    )
     if validation.has_errors:
         raise CameraCharacterizationError(validation)
     assert dark_frames_dn is not None
     assert flat_series is not None
 
     series_values = tuple(flat_series)
-    dark_mean_dn = float(np.mean(dark_frames_dn, dtype=float))
-    dark_temporal_variance_dn2 = _mean_temporal_variance(dark_frames_dn)
+    dark_statistics = compute_image_stack_statistics(
+        dark_frames_dn,
+        block_size=aggregation_block_size,
+        ddof=1,
+    )
+    dark_mean_dn = dark_statistics.mean_value
+    dark_temporal_variance_dn2 = dark_statistics.mean_variance
     dark_temporal_noise_dn = math.sqrt(max(dark_temporal_variance_dn2, 0.0))
+
+    flat_statistics = tuple(
+        compute_image_stack_statistics(
+            series.frames_dn,
+            block_size=aggregation_block_size,
+            ddof=1,
+        )
+        for series in series_values
+    )
 
     exposure_times_s = np.array(
         [series.exposure_time_s for series in series_values],
         dtype=float,
     )
     mean_signal_dn = np.array(
-        [
-            float(np.mean(series.frames_dn, dtype=float)) - dark_mean_dn
-            for series in series_values
-        ],
+        [statistics.mean_value - dark_mean_dn for statistics in flat_statistics],
         dtype=float,
     )
     temporal_variance_dn2 = np.array(
-        [_mean_temporal_variance(series.frames_dn) for series in series_values],
+        [statistics.mean_variance for statistics in flat_statistics],
         dtype=float,
     )
     temporal_noise_dn = np.sqrt(np.maximum(temporal_variance_dn2, 0.0))
@@ -119,7 +129,11 @@ def characterize_relative_dn(
     )
     saturation_fractions = np.array(
         [
-            float(np.mean(series.frames_dn >= parameters.saturation_dn))
+            _fraction_at_or_above(
+                series.frames_dn,
+                parameters.saturation_dn,
+                aggregation_block_size,
+            )
             for series in series_values
         ],
         dtype=float,

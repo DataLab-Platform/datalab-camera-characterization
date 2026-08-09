@@ -11,6 +11,8 @@ from types import MappingProxyType
 
 import numpy as np
 
+from .aggregation import _fraction_at_or_above, compute_image_stack_statistics
+
 
 class CameraDiagnosticLevel(str, enum.Enum):
     """Severity of a Camera input diagnostic."""
@@ -161,6 +163,14 @@ def _validate_fraction(value: float, name: str) -> float:
     return normalized
 
 
+def _validate_aggregation_block_size(value: int) -> None:
+    """Validate the maximum number of frames processed together."""
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise TypeError("Aggregation block size must be an integer")
+    if value <= 0:
+        raise ValueError("Aggregation block size must be positive")
+
+
 def _diagnostic(
     level: CameraDiagnosticLevel,
     code: str,
@@ -175,6 +185,7 @@ def _validate_stack(
     value: object,
     name: str,
     parameters: CameraValidationParameters,
+    aggregation_block_size: int,
     diagnostics: list[CameraInputDiagnostic],
 ) -> _StackInfo | None:
     """Validate one frame stack and return properties safe for calculations."""
@@ -223,7 +234,10 @@ def _validate_stack(
             )
         )
         return None
-    if not np.all(np.isfinite(value)):
+    if any(
+        not np.all(np.isfinite(value[start : start + aggregation_block_size]))
+        for start in range(0, value.shape[0], aggregation_block_size)
+    ):
         diagnostics.append(
             _diagnostic(
                 CameraDiagnosticLevel.ERROR,
@@ -246,8 +260,12 @@ def _validate_stack(
         )
         return None
 
-    temporal_variance = np.var(value.astype(float, copy=False), axis=0, ddof=1)
-    mean_temporal_variance = float(np.mean(temporal_variance))
+    statistics = compute_image_stack_statistics(
+        value,
+        block_size=aggregation_block_size,
+        ddof=1,
+    )
+    mean_temporal_variance = statistics.mean_variance
     if mean_temporal_variance == 0.0:
         diagnostics.append(
             _diagnostic(
@@ -270,7 +288,11 @@ def _validate_stack(
             )
         )
 
-    saturation_fraction = float(np.mean(value >= parameters.saturation_dn))
+    saturation_fraction = _fraction_at_or_above(
+        value,
+        parameters.saturation_dn,
+        aggregation_block_size,
+    )
     if saturation_fraction >= parameters.saturation_fraction_warning:
         diagnostics.append(
             _diagnostic(
@@ -295,6 +317,8 @@ def validate_camera_inputs(
     dark_frames_dn: np.ndarray | None,
     flat_series: Sequence[CameraExposureSeries] | None,
     parameters: CameraValidationParameters | None = None,
+    *,
+    aggregation_block_size: int = 1,
 ) -> CameraInputValidation:
     """Validate Camera inputs without mutating data or raising dataset errors.
 
@@ -302,11 +326,13 @@ def validate_camera_inputs(
         dark_frames_dn: Dark frame stack shaped ``(frames, height, width)``
         flat_series: Uniform-illumination stacks in increasing exposure order
         parameters: Explicit validation thresholds
+        aggregation_block_size: Maximum frames converted to float together
 
     Returns:
         Structured diagnostics; errors block characterization
     """
     parameters = parameters or CameraValidationParameters()
+    _validate_aggregation_block_size(aggregation_block_size)
     diagnostics: list[CameraInputDiagnostic] = []
     stack_infos: list[_StackInfo] = []
     flat_stack_infos: list[_StackInfo] = []
@@ -324,6 +350,7 @@ def validate_camera_inputs(
             dark_frames_dn,
             "dark",
             parameters,
+            aggregation_block_size,
             diagnostics,
         )
         if dark_info is not None:
@@ -406,6 +433,7 @@ def validate_camera_inputs(
             series.frames_dn,
             name,
             parameters,
+            aggregation_block_size,
             diagnostics,
         )
         if stack_info is not None:

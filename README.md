@@ -3,10 +3,10 @@
 Headless workflows and DataLab adapters for relative characterization of
 scientific cameras and detectors.
 
-This repository currently provides a deterministic synthetic camera model with
-explicit ground truth. It does not yet implement characterization metrics and
-does not claim EMVA 1288 compliance. Those capabilities require dedicated
-scientific validation.
+This repository currently provides a deterministic synthetic camera model,
+structured input diagnostics, and relative characterization metrics in DN. It
+does not claim EMVA 1288 compliance; calibrated or normative capabilities
+require dedicated scientific validation.
 
 ## Architecture
 
@@ -67,10 +67,14 @@ result = characterize_relative_dn(
     CameraExposureSeries(flat_high, exposure_time_s=0.02),
   ),
   CameraValidationParameters(saturation_dn=4095),
+  aggregation_block_size=4,
 )
 ```
 
 Input anomalies are returned as structured diagnostics before characterization.
+Mean, sample variance, finite-value scans, and saturation counts process at
+most `aggregation_block_size` frames together; the default of one frame
+minimizes temporary memory.
 All metrics remain relative quantities in DN; no conversion gain, quantum
 efficiency, or calibrated radiometric quantity is estimated. See
 [`doc/characterization.md`](doc/characterization.md).
