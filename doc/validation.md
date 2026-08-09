@@ -76,7 +76,8 @@ arrays occupy 128 MiB. Timing covers the complete `characterize_relative_dn`
 pipeline. `tracemalloc` starts only after source allocation, so
 `peak_incremental_bytes` measures traced Python and NumPy allocations added by
 validation and characterization. The JSON report records all parameters and
-runtime versions. It deliberately contains no pass/fail budget.
+runtime versions. The benchmark harness reports evidence without deciding
+pass/fail; `scripts/check_alpha_gate.py` evaluates its fixed Alpha campaign.
 
 A reference run on Windows with CPython 3.9.10 and NumPy 2.0.2 produced:
 
@@ -87,6 +88,21 @@ A reference run on Windows with CPython 3.9.10 and NumPy 2.0.2 produced:
 
 The numbers are single-run observations on one host, not portable acceptance
 limits. They demonstrate the expected speed-memory tradeoff and provide a
-baseline for detecting large regressions. Before setting an Alpha gate budget,
-repeat the measurement on supported deployment hardware and corroborate the
-traced allocation peak with process-level resident-memory measurements.
+baseline for detecting large regressions.
+
+## Alpha Memory Gate
+
+On 2026-08-09, two fresh processes each ran the default 2048 x 2048 campaign
+three times with CPython 3.9.10 and NumPy 2.0.2. A 5 ms sampler corroborated the
+`tracemalloc` peak with process RSS after allocating the 128 MiB source arrays:
+
+| Run | Time/run | Traced peak | RSS peak | RSS/input |
+| ---: | ---: | ---: | ---: | ---: |
+| 1 | 1.893 s | 336.06 MiB | 336.77 MiB | 2.631 x |
+| 2 | 1.749 s | 336.06 MiB | 336.78 MiB | 2.631 x |
+
+The Alpha budget is three times the resident input size: both incremental
+peaks must remain at or below 384 MiB for this fixed campaign. The independently
+executed gate then passed at 336.06 MiB traced and 336.78 MiB RSS. This budget
+is intentionally local to the defined campaign; elapsed time has no pass/fail
+limit. See [`alpha-gate.md`](alpha-gate.md) for the complete gate and scope.

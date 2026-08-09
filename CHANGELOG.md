@@ -24,3 +24,5 @@ All notable changes to this project will be documented in this file.
   from Desktop without requiring users to write Python.
 - Qualify isolated wheel installation, entry-point hot reload, and native HDF5
   persistence of Camera UUIDs, provenance, and anchored metrics.
+- Add an executable relative-DN Alpha gate covering synthetic reliability,
+  complete Desktop quickstart UX, and a measured traced/RSS memory ceiling.

@@ -7,11 +7,13 @@ import dataclasses
 import gc
 import json
 import platform
+import threading
 import time
 import tracemalloc
 from typing import Sequence
 
 import numpy as np
+import psutil
 
 from datalab_camera_characterization.core import (
     CameraExposureSeries,
@@ -42,6 +44,41 @@ class BenchmarkConfiguration:
             raise ValueError("frames_per_series must be at least 2")
         if self.flat_levels < 2:
             raise ValueError("flat_levels must be at least 2")
+
+
+class _PeakRssSampler:
+    """Sample peak resident memory while a benchmark is running."""
+
+    def __init__(self) -> None:
+        self._process = psutil.Process()
+        self._stopped = threading.Event()
+        self._thread = threading.Thread(
+            target=self._sample,
+            name="camera-benchmark-rss",
+            daemon=True,
+        )
+        self.baseline_bytes = self._process.memory_info().rss
+        self.peak_bytes = self.baseline_bytes
+
+    def _record(self) -> None:
+        """Record the current process resident set size."""
+        self.peak_bytes = max(self.peak_bytes, self._process.memory_info().rss)
+
+    def _sample(self) -> None:
+        """Sample until the benchmark signals completion."""
+        while not self._stopped.wait(0.005):
+            self._record()
+
+    def start(self) -> None:
+        """Start sampling resident memory."""
+        self._thread.start()
+
+    def stop(self) -> None:
+        """Stop sampling and capture the final resident-memory value."""
+        self._record()
+        self._stopped.set()
+        self._thread.join()
+        self._record()
 
 
 def _series_frames(
@@ -90,19 +127,24 @@ def run_benchmark(configuration: BenchmarkConfiguration) -> dict[str, object]:
     parameters = CameraValidationParameters(saturation_dn=4_095.0)
 
     gc.collect()
+    rss_sampler = _PeakRssSampler()
     tracemalloc.start()
     baseline_bytes = tracemalloc.get_traced_memory()[0]
+    rss_sampler.start()
     started_at = time.perf_counter()
-    for _ in range(configuration.repetitions):
-        result = characterize_relative_dn(
-            dark,
-            flats,
-            parameters,
-            aggregation_block_size=configuration.block_size,
-        )
-    elapsed_s = time.perf_counter() - started_at
-    _, peak_bytes = tracemalloc.get_traced_memory()
-    tracemalloc.stop()
+    try:
+        for _ in range(configuration.repetitions):
+            result = characterize_relative_dn(
+                dark,
+                flats,
+                parameters,
+                aggregation_block_size=configuration.block_size,
+            )
+        elapsed_s = time.perf_counter() - started_at
+        _, peak_bytes = tracemalloc.get_traced_memory()
+    finally:
+        tracemalloc.stop()
+        rss_sampler.stop()
 
     pixel_frames = configuration.height * configuration.width * input_frame_count
     return {
@@ -119,9 +161,13 @@ def run_benchmark(configuration: BenchmarkConfiguration) -> dict[str, object]:
             pixel_frames * configuration.repetitions / elapsed_s / 1_000_000.0
         ),
         "peak_incremental_bytes": peak_bytes - baseline_bytes,
+        "baseline_rss_bytes": rss_sampler.baseline_bytes,
+        "peak_rss_bytes": rss_sampler.peak_bytes,
+        "peak_incremental_rss_bytes": (
+            rss_sampler.peak_bytes - rss_sampler.baseline_bytes
+        ),
         "memory_measurement": (
-            "tracemalloc peak after resident source allocation; includes "
-            "traced Python and NumPy allocations"
+            "tracemalloc and sampled process RSS peaks after resident source allocation"
         ),
         "response_slope_dn_per_s": result.linear_fit_slope_dn_per_s,
     }

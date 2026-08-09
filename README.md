@@ -112,6 +112,19 @@ Opening the example asks before replacing a non-empty workspace. The complete
 walkthrough and expected results are documented in
 [`doc/quickstart.md`](doc/quickstart.md).
 
+## Alpha Gate
+
+The current relative-DN Desktop scope has one executable qualification gate:
+
+```bash
+python -m scripts.check_alpha_gate
+```
+
+It runs the complete test suite and a fixed 2048 x 2048 benchmark, then checks
+both traced allocations and sampled process RSS against the measured memory
+budget. Scope, evidence, thresholds, and exclusions are documented in
+[`doc/alpha-gate.md`](doc/alpha-gate.md).
+
 ## Development
 
 ```bash
@@ -126,9 +139,9 @@ loads the plugin through its real `datalab.plugins` entry point, exercises a
 Desktop hot reload, and round-trips a characterized quickstart workspace
 through native HDF5.
 
-The benchmark is explicit and excluded from the default test suite. Its
-reported time and memory are observations for the current host, not portable
-acceptance thresholds.
+The benchmark is explicit and excluded from the default test suite. Elapsed
+time and throughput remain observations rather than portable acceptance
+thresholds; only the documented Alpha memory ceiling is enforced by the gate.
 
 Installing the project registers `org.datalab.camera-characterization` through the
 `datalab.plugins` entry-point group. The Desktop adapter exposes the headless

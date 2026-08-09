@@ -56,6 +56,11 @@ Desktop hot reload, then persists a complete Camera run through DataLab's
 native HDF5 format. These are host integration tests; they do not add Desktop
 dependencies to `core` or `workflow`.
 
+`scripts/check_alpha_gate.py` composes the full automated suite with the fixed
+representative memory campaign. The gate remains outside the production
+dependency graph and emits machine-readable evidence for both traced and
+resident-memory peaks.
+
 Scientific and resource validation live outside the production dependency
 graph. `tests/validation` compares characterization with simulator truth;
 `benchmarks` contains explicit scripts that are not collected by pytest. See
