@@ -3,9 +3,10 @@
 Headless workflows and DataLab adapters for relative characterization of
 scientific cameras and detectors.
 
-This repository is an architecture scaffold. It does not yet implement camera
-simulation or characterization metrics, and it does not claim EMVA 1288
-compliance. Those capabilities require dedicated scientific validation.
+This repository currently provides a deterministic synthetic camera model with
+explicit ground truth. It does not yet implement characterization metrics and
+does not claim EMVA 1288 compliance. Those capabilities require dedicated
+scientific validation.
 
 ## Architecture
 
@@ -24,6 +25,27 @@ core  <---  workflow  <---  adapters/desktop.py
 
 `core` and `workflow` must not import Qt, DataLab GUI modules, Pyodide browser
 shims, or host adapters. Tests enforce this dependency direction.
+
+## Synthetic Frames
+
+The simulator models photoelectron shot noise, dark current, read noise, PRNU,
+DSNU, ADC saturation, quantization, and deterministic dead/hot pixels:
+
+```python
+from datalab_camera_characterization.core import (
+  CameraSimulationParameters,
+  simulate_camera_frames,
+)
+
+result = simulate_camera_frames(
+  CameraSimulationParameters(shape=(256, 320), frame_count=10, seed=42)
+)
+frames = result.frames_dn
+truth = result.truth
+```
+
+The same parameters and seed produce identical frames and truth maps. See
+[`doc/simulation.md`](doc/simulation.md) for units, equations, and limitations.
 
 ## Development
 

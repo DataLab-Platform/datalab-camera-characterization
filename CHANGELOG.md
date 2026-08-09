@@ -6,3 +6,4 @@ All notable changes to this project will be documented in this file.
 
 - Establish the independent Camera plugin package.
 - Separate host-independent core and workflow code from host adapters.
+- Add deterministic synthetic camera frames with explicit ground-truth maps.

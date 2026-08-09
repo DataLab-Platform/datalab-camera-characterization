@@ -18,7 +18,7 @@ HOST_MODULES = (
     "qtpy",
 )
 FORBIDDEN_LAYER_IMPORTS = {
-    "core": ("datalab_camera_characterization.workflow",),
+    "core": ("datalab", "datalab_camera_characterization.workflow"),
     "workflow": (),
 }
 

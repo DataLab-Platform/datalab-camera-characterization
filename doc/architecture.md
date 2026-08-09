@@ -13,7 +13,7 @@ algorithms.
 
 ## Current Scope
 
-The initial repository establishes package identity, namespaced metadata, an
-empty recipe registry, and explicit Desktop/Web integration boundaries. Camera
-simulation, validation, characterization algorithms, and recipe outcomes are
-separate roadmap items and remain intentionally absent.
+The repository provides package identity, namespaced metadata, a deterministic
+pure-NumPy camera simulator, an empty recipe registry, and explicit Desktop/Web
+integration boundaries. Dataset validation, characterization algorithms, and
+recipe outcomes are separate roadmap items and remain intentionally absent.
