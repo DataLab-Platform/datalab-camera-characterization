@@ -3,8 +3,30 @@
 from __future__ import annotations
 
 import dataclasses
+from collections.abc import Iterator, Sequence
+from typing import Union
 
 import numpy as np
+
+ImageStackSource = Union[np.ndarray, Sequence[np.ndarray]]
+
+
+class _ImageStackStructureError(ValueError):
+    """Describe one invalid stack structure for structured validation."""
+
+    def __init__(self, code: str, message: str, **details: object) -> None:
+        self.code = code
+        self.details = details
+        super().__init__(message)
+
+
+@dataclasses.dataclass(frozen=True)
+class _ImageStackDescription:
+    """Structure shared by ndarray stacks and frame sequences."""
+
+    frame_count: int
+    spatial_shape: tuple[int, int]
+    dtype: np.dtype
 
 
 def _validate_positive_integer(value: int, name: str) -> None:
@@ -36,18 +58,117 @@ def _validate_spatial_shape(shape: tuple[int, int]) -> None:
         raise ValueError("Spatial shape must contain two positive integers")
 
 
+def _describe_image_stack(frames: ImageStackSource) -> _ImageStackDescription:
+    """Validate stack structure without scanning or copying frame values."""
+    if isinstance(frames, np.ndarray):
+        if frames.ndim != 3:
+            raise _ImageStackStructureError(
+                "invalid_stack_dimensions",
+                "Frames must have shape (frames, height, width)",
+                shape=list(frames.shape),
+            )
+        if 0 in frames.shape:
+            raise _ImageStackStructureError(
+                "empty_series",
+                "Frames must not be empty",
+                shape=list(frames.shape),
+            )
+        if not np.issubdtype(frames.dtype, np.number) or np.issubdtype(
+            frames.dtype, np.complexfloating
+        ):
+            raise _ImageStackStructureError(
+                "non_numeric_dtype",
+                "Frames must use a real numeric dtype",
+                dtype=str(frames.dtype),
+            )
+        return _ImageStackDescription(
+            frames.shape[0],
+            frames.shape[1:],
+            frames.dtype,
+        )
+
+    if isinstance(frames, (str, bytes)) or not isinstance(frames, Sequence):
+        raise _ImageStackStructureError(
+            "invalid_stack_type",
+            "Frames must be a NumPy array or a sequence of NumPy image arrays",
+        )
+    if len(frames) == 0:
+        raise _ImageStackStructureError(
+            "empty_series",
+            "Frames must not be empty",
+            shape=[0],
+        )
+
+    first = frames[0]
+    if not isinstance(first, np.ndarray) or first.ndim != 2:
+        raise _ImageStackStructureError(
+            "invalid_stack_dimensions",
+            "Each frame must be a two-dimensional NumPy array",
+        )
+    if 0 in first.shape:
+        raise _ImageStackStructureError(
+            "empty_series",
+            "Frames must not be empty",
+            shape=[len(frames), *first.shape],
+        )
+    if not np.issubdtype(first.dtype, np.number) or np.issubdtype(
+        first.dtype, np.complexfloating
+    ):
+        raise _ImageStackStructureError(
+            "non_numeric_dtype",
+            "Frames must use a real numeric dtype",
+            dtype=str(first.dtype),
+        )
+    for index in range(1, len(frames)):
+        frame = frames[index]
+        if not isinstance(frame, np.ndarray) or frame.ndim != 2:
+            raise _ImageStackStructureError(
+                "invalid_stack_dimensions",
+                "Each frame must be a two-dimensional NumPy array",
+                frame_index=index,
+            )
+        if frame.shape != first.shape:
+            raise _ImageStackStructureError(
+                "inconsistent_frame_shape",
+                "Frames in one series must share an image shape",
+                frame_index=index,
+                expected=list(first.shape),
+                actual=list(frame.shape),
+            )
+        if frame.dtype != first.dtype:
+            raise _ImageStackStructureError(
+                "inconsistent_frame_dtype",
+                "Frames in one series must share a dtype",
+                frame_index=index,
+                expected=str(first.dtype),
+                actual=str(frame.dtype),
+            )
+    return _ImageStackDescription(len(frames), first.shape, first.dtype)
+
+
 def _validate_block_structure(block: np.ndarray) -> None:
-    """Validate one non-empty stack without scanning its values."""
+    """Validate one non-empty ndarray block without scanning its values."""
     if not isinstance(block, np.ndarray):
         raise TypeError("Image stack block must be a NumPy array")
-    if block.ndim != 3:
-        raise ValueError("Image stack block must have shape (frames, height, width)")
-    if 0 in block.shape:
-        raise ValueError("Image stack block must not be empty")
-    if not np.issubdtype(block.dtype, np.number) or np.issubdtype(
-        block.dtype, np.complexfloating
-    ):
-        raise TypeError("Image stack block must use a real numeric dtype")
+    try:
+        _describe_image_stack(block)
+    except _ImageStackStructureError as error:
+        raise ValueError(str(error)) from error
+
+
+def _iter_image_stack_blocks(
+    frames: ImageStackSource,
+    block_size: int,
+) -> Iterator[np.ndarray]:
+    """Yield ndarray blocks without copying more than ``block_size`` frames."""
+    _validate_positive_integer(block_size, "Block size")
+    description = _describe_image_stack(frames)
+    for start in range(0, description.frame_count, block_size):
+        stop = min(start + block_size, description.frame_count)
+        if isinstance(frames, np.ndarray):
+            yield frames[start:stop]
+        else:
+            yield np.stack([frames[index] for index in range(start, stop)], axis=0)
 
 
 def _validate_block_values(block: np.ndarray) -> None:
@@ -63,18 +184,18 @@ def _readonly(array: np.ndarray) -> np.ndarray:
 
 
 def _fraction_at_or_above(
-    frames: np.ndarray,
+    frames: ImageStackSource,
     threshold: float,
     block_size: int,
 ) -> float:
     """Return a threshold fraction without allocating a full-stack mask."""
-    _validate_positive_integer(block_size, "Block size")
-    _validate_block_structure(frames)
+    description = _describe_image_stack(frames)
     matching_count = sum(
-        int(np.count_nonzero(frames[start : start + block_size] >= threshold))
-        for start in range(0, frames.shape[0], block_size)
+        int(np.count_nonzero(block >= threshold))
+        for block in _iter_image_stack_blocks(frames, block_size)
     )
-    return matching_count / frames.size
+    pixel_count = int(np.prod(description.spatial_shape))
+    return matching_count / (description.frame_count * pixel_count)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -182,7 +303,7 @@ class ImageStackAccumulator:
 
 
 def compute_image_stack_statistics(
-    frames: np.ndarray,
+    frames: ImageStackSource,
     *,
     block_size: int = 1,
     ddof: int = 1,
@@ -190,7 +311,7 @@ def compute_image_stack_statistics(
     """Compute per-pixel stack statistics using bounded frame blocks.
 
     Args:
-        frames: Image stack shaped ``(frames, height, width)``
+        frames: 3D image stack or sequence of 2D frame arrays
         block_size: Maximum number of frames converted to float at once
         ddof: Delta degrees of freedom used for variance
 
@@ -199,15 +320,16 @@ def compute_image_stack_statistics(
     """
     _validate_positive_integer(block_size, "Block size")
     _validate_ddof(ddof)
-    _validate_block_structure(frames)
-    accumulator = ImageStackAccumulator(frames.shape[1:])
-    for start in range(0, frames.shape[0], block_size):
-        accumulator.update_block(frames[start : start + block_size])
+    description = _describe_image_stack(frames)
+    accumulator = ImageStackAccumulator(description.spatial_shape)
+    for block in _iter_image_stack_blocks(frames, block_size):
+        accumulator.update_block(block)
     return accumulator.finalize(ddof)
 
 
 __all__ = [
     "ImageStackAccumulator",
+    "ImageStackSource",
     "ImageStackStatistics",
     "compute_image_stack_statistics",
 ]

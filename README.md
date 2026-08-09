@@ -4,9 +4,10 @@ Headless workflows and DataLab adapters for relative characterization of
 scientific cameras and detectors.
 
 This repository currently provides a deterministic synthetic camera model,
-structured input diagnostics, and relative characterization metrics in DN. It
-does not claim EMVA 1288 compliance; calibrated or normative capabilities
-require dedicated scientific validation.
+structured input diagnostics, relative characterization metrics in DN, and a
+headless DataLab recipe producing a response curve, useful mean images, and an
+anchored metric table. It does not claim EMVA 1288 compliance; calibrated or
+normative capabilities require dedicated scientific validation.
 
 ## Architecture
 
@@ -79,6 +80,23 @@ All metrics remain relative quantities in DN; no conversion gain, quantum
 efficiency, or calibrated radiometric quantity is estimated. See
 [`doc/characterization.md`](doc/characterization.md).
 
+## Headless Recipe
+
+The registered `relative-dn-characterization` recipe accepts many dark images
+and many flat images. Each flat image carries its exposure time in the stable
+metadata key returned by `EXPOSURE_TIME_METADATA_KEY`; frames sharing an
+exposure are grouped into one statistical series.
+
+The recipe returns:
+
+- `response`: the response curve and anchor object;
+- `mean_dark`: the mean dark image;
+- `mean_flat`: the last unsaturated mean flat image;
+- `metrics`: a non-normative `TableResult` attached to `response`.
+
+See [`doc/workflow.md`](doc/workflow.md) for the input, parameter, diagnostic,
+output, and provenance contracts.
+
 ## Development
 
 ```bash
@@ -88,5 +106,5 @@ python -m ruff check .
 ```
 
 Installing the project registers `org.datalab.camera-characterization` through the
-`datalab.plugins` entry-point group. The Desktop adapter intentionally exposes
-no recipes or actions until the corresponding headless workflow exists.
+`datalab.plugins` entry-point group. The Desktop adapter exposes the headless
+recipe through the plugin SDK and intentionally adds no custom GUI action.

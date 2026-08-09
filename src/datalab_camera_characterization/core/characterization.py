@@ -8,7 +8,11 @@ from collections.abc import Sequence
 
 import numpy as np
 
-from .aggregation import _fraction_at_or_above, compute_image_stack_statistics
+from .aggregation import (
+    ImageStackSource,
+    _fraction_at_or_above,
+    compute_image_stack_statistics,
+)
 from .validation import (
     CameraExposureSeries,
     CameraInputValidation,
@@ -56,7 +60,7 @@ def _readonly(array: np.ndarray) -> np.ndarray:
 
 
 def characterize_relative_dn(
-    dark_frames_dn: np.ndarray | None,
+    dark_frames_dn: ImageStackSource | None,
     flat_series: Sequence[CameraExposureSeries] | None,
     validation_parameters: CameraValidationParameters | None = None,
     *,
@@ -65,7 +69,7 @@ def characterize_relative_dn(
     """Compute relative metrics with bounded mean and variance aggregation.
 
     Args:
-        dark_frames_dn: Dark frame stack shaped ``(frames, height, width)``
+        dark_frames_dn: Dark 3D stack or sequence of 2D frame arrays
         flat_series: Uniform-illumination stacks in increasing exposure order
         validation_parameters: Explicit validation and saturation thresholds
         aggregation_block_size: Maximum frames converted to float together

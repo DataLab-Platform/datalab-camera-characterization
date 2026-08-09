@@ -152,3 +152,20 @@ def test_invalid_flat_does_not_hide_unsaturated_level_error() -> None:
     assert {"insufficient_frames", "insufficient_unsaturated_levels"} <= (
         _diagnostic_codes(report)
     )
+
+
+def test_frame_sequence_shape_mismatch_is_a_structured_diagnostic() -> None:
+    """Inconsistent frames do not escape as a NumPy stack exception."""
+    dark = (
+        np.zeros((2, 2), dtype=np.uint16),
+        np.zeros((2, 3), dtype=np.uint16),
+    )
+    valid_frames = tuple(np.zeros((2, 2), dtype=np.uint16) for _ in range(2))
+    flats = (
+        CameraExposureSeries(valid_frames, 1.0),
+        CameraExposureSeries(valid_frames, 2.0),
+    )
+
+    report = validate_camera_inputs(dark, flats)
+
+    assert "inconsistent_frame_shape" in _diagnostic_codes(report)

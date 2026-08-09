@@ -11,7 +11,8 @@ responsivity, or photon flux.
 
 ## Input Contract
 
-Each stack has shape `(frames, height, width)`. Dark and flat stacks must:
+Each series may be a stack shaped `(frames, height, width)` or a sequence of 2D
+arrays. Dark and flat series must:
 
 - use the same image shape and real numeric dtype;
 - contain at least the configured number of frames;
@@ -85,8 +86,9 @@ sample_variance = merged_M2 / (N + n - 1)
 
 `compute_image_stack_statistics` exposes the block implementation directly.
 `ImageStackAccumulator` also accepts individual frames or caller-provided
-blocks when the data source can stream them. Results contain read-only
-per-pixel mean and variance arrays.
+blocks when the data source can stream them. The convenience API accepts a 3D
+array or a sequence of 2D arrays. Results contain read-only per-pixel mean and
+variance arrays.
 
 `validate_camera_inputs` and `characterize_relative_dn` accept the keyword-only
 `aggregation_block_size`. The default is one frame, minimizing transient
@@ -94,11 +96,11 @@ memory. A larger value trades additional temporary memory for fewer NumPy
 operations. Float conversion, finite-value scans, mean/variance temporaries,
 and saturation masks receive no more than that number of frames at once.
 
-For a stack shaped `(frames, height, width)` and block size `B`, temporary
+For frames shaped `(height, width)` and block size `B`, temporary
 frame storage scales as `O(B * height * width)` and accumulator state scales as
-`O(height * width)`, independent of the total frame count. The APIs still
-receive existing NumPy stacks, so this bound applies to additional processing
-memory and does not remove the caller's input arrays from memory.
+`O(height * width)`, independent of the total frame count. Existing 3D input
+stacks remain owned by the caller. A sequence of existing 2D arrays avoids an
+additional complete stack: only the current block is materialized.
 
 Unit tests compare multiple block sizes, incomplete final blocks, integer data,
 and high-offset floating-point data against NumPy `mean` and `var(ddof=1)`.

@@ -2,6 +2,7 @@
 
 from .aggregation import (
     ImageStackAccumulator,
+    ImageStackSource,
     ImageStackStatistics,
     compute_image_stack_statistics,
 )
@@ -38,6 +39,7 @@ __all__ = [
     "CameraSimulationTruth",
     "CameraValidationParameters",
     "ImageStackAccumulator",
+    "ImageStackSource",
     "ImageStackStatistics",
     "characterize_relative_dn",
     "compute_image_stack_statistics",

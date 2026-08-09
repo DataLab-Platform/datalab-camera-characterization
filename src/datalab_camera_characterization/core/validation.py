@@ -11,7 +11,14 @@ from types import MappingProxyType
 
 import numpy as np
 
-from .aggregation import _fraction_at_or_above, compute_image_stack_statistics
+from .aggregation import (
+    ImageStackSource,
+    _describe_image_stack,
+    _fraction_at_or_above,
+    _ImageStackStructureError,
+    _iter_image_stack_blocks,
+    compute_image_stack_statistics,
+)
 
 
 class CameraDiagnosticLevel(str, enum.Enum):
@@ -95,7 +102,7 @@ class CameraExposureSeries:
     than in ``__post_init__`` so malformed user data produces diagnostics.
     """
 
-    frames_dn: np.ndarray
+    frames_dn: ImageStackSource
     exposure_time_s: float
     label: str = ""
 
@@ -139,7 +146,7 @@ class _StackInfo:
     """Validated properties needed for cross-series checks."""
 
     name: str
-    frames: np.ndarray
+    frames: ImageStackSource
     spatial_shape: tuple[int, int]
     dtype: np.dtype
     saturation_fraction: float
@@ -189,54 +196,22 @@ def _validate_stack(
     diagnostics: list[CameraInputDiagnostic],
 ) -> _StackInfo | None:
     """Validate one frame stack and return properties safe for calculations."""
-    if not isinstance(value, np.ndarray):
+    try:
+        description = _describe_image_stack(value)
+    except _ImageStackStructureError as error:
         diagnostics.append(
             _diagnostic(
                 CameraDiagnosticLevel.ERROR,
-                "invalid_stack_type",
-                f"{name} frames must be a NumPy array",
+                error.code,
+                f"{name} {error}",
                 series=name,
-            )
-        )
-        return None
-    if value.ndim != 3:
-        diagnostics.append(
-            _diagnostic(
-                CameraDiagnosticLevel.ERROR,
-                "invalid_stack_dimensions",
-                f"{name} frames must have shape (frames, height, width)",
-                series=name,
-                shape=list(value.shape),
-            )
-        )
-        return None
-    if value.shape[0] == 0 or value.shape[1] == 0 or value.shape[2] == 0:
-        diagnostics.append(
-            _diagnostic(
-                CameraDiagnosticLevel.ERROR,
-                "empty_series",
-                f"{name} frames must not be empty",
-                series=name,
-                shape=list(value.shape),
-            )
-        )
-        return None
-    if not np.issubdtype(value.dtype, np.number) or np.issubdtype(
-        value.dtype, np.complexfloating
-    ):
-        diagnostics.append(
-            _diagnostic(
-                CameraDiagnosticLevel.ERROR,
-                "non_numeric_dtype",
-                f"{name} frames must use a real numeric dtype",
-                series=name,
-                dtype=str(value.dtype),
+                **error.details,
             )
         )
         return None
     if any(
-        not np.all(np.isfinite(value[start : start + aggregation_block_size]))
-        for start in range(0, value.shape[0], aggregation_block_size)
+        not np.all(np.isfinite(block))
+        for block in _iter_image_stack_blocks(value, aggregation_block_size)
     ):
         diagnostics.append(
             _diagnostic(
@@ -247,14 +222,14 @@ def _validate_stack(
             )
         )
         return None
-    if value.shape[0] < parameters.minimum_frame_count:
+    if description.frame_count < parameters.minimum_frame_count:
         diagnostics.append(
             _diagnostic(
                 CameraDiagnosticLevel.ERROR,
                 "insufficient_frames",
                 f"{name} does not contain enough acquisitions",
                 series=name,
-                actual=value.shape[0],
+                actual=description.frame_count,
                 required=parameters.minimum_frame_count,
             )
         )
@@ -307,14 +282,14 @@ def _validate_stack(
     return _StackInfo(
         name,
         value,
-        value.shape[1:],
-        value.dtype,
+        description.spatial_shape,
+        description.dtype,
         saturation_fraction,
     )
 
 
 def validate_camera_inputs(
-    dark_frames_dn: np.ndarray | None,
+    dark_frames_dn: ImageStackSource | None,
     flat_series: Sequence[CameraExposureSeries] | None,
     parameters: CameraValidationParameters | None = None,
     *,

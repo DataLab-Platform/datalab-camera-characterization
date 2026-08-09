@@ -56,6 +56,23 @@ def test_accumulator_merges_irregular_blocks_and_frames() -> None:
     )
 
 
+def test_frame_sequence_matches_equivalent_ndarray_stack() -> None:
+    """A sequence of existing 2D arrays preserves batch statistics."""
+    frames = np.random.default_rng(13).integers(
+        0,
+        1_024,
+        size=(7, 4, 5),
+        dtype=np.uint16,
+    )
+
+    stack_result = compute_image_stack_statistics(frames, block_size=3)
+    sequence_result = compute_image_stack_statistics(tuple(frames), block_size=3)
+
+    np.testing.assert_allclose(sequence_result.mean, stack_result.mean)
+    np.testing.assert_allclose(sequence_result.variance, stack_result.variance)
+    assert sequence_result.count == stack_result.count
+
+
 @pytest.mark.parametrize("block_size", [1, 3, 8, 32])
 def test_float_statistics_remain_stable_at_high_offset(block_size: int) -> None:
     """Chan merges stay close to NumPy for small variance on a large offset."""
