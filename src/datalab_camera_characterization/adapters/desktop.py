@@ -48,48 +48,51 @@ class CameraInputRoleParameters(
 
     @classmethod
     def create(cls, images: Sequence[ImageObj]) -> CameraInputRoleParameters:
-        """Create a form containing one required role choice per image."""
+        """Create a compact form selecting Dark frames from all images."""
         image_values = tuple(images)
         if len({get_uuid(image) for image in image_values}) != len(image_values):
             raise RecipeValidationError(_("Selected Camera images must be unique"))
-        role_fields: dict[str, gds.ChoiceItem] = {}
+        choices: list[str] = []
+        dark_frame_indices: list[int] = []
         for index, image in enumerate(image_values):
-            field_name = f"role_{index:04d}"
             image_title = image.title if isinstance(image.title, str) else ""
             display_title = image_title or _("Untitled image")
-            default_role = "dark" if "dark" in image_title.casefold() else "flat"
-            role_fields[field_name] = gds.ChoiceItem(
-                f"{index + 1}. {display_title}",
-                (("dark", _("Dark")), ("flat", _("Flat"))),
-                default=default_role,
-                radio=True,
-            )
+            choices.append(f"{index + 1}. {display_title}")
+            if "dark" in image_title.casefold():
+                dark_frame_indices.append(index)
         form_class = type(
             cls.__name__,
             (cls,),
-            {"__module__": cls.__module__, **role_fields},
+            {
+                "__module__": cls.__module__,
+                "dark_frame_indices": gds.MultipleChoiceItem(
+                    _("Dark frames (unchecked images are Flat)"),
+                    choices,
+                    default=tuple(dark_frame_indices),
+                ).vertical(3),
+            },
         )
-        return form_class(image_values, tuple(role_fields))
+        return form_class(image_values)
 
     def __init__(
         self,
         images: Sequence[ImageObj] = (),
-        role_fields: Sequence[str] = (),
     ) -> None:
-        self._images_by_field = dict(zip(role_fields, images))
+        self._images = tuple(images)
         super().__init__()
 
     def to_recipe_inputs(self) -> RecipeInputs:
         """Validate role assignments and return inputs in selection order."""
+        dark_frame_indices = set(self.dark_frame_indices)
         dark_frames = tuple(
             image
-            for field_name, image in self._images_by_field.items()
-            if getattr(self, field_name) == "dark"
+            for index, image in enumerate(self._images)
+            if index in dark_frame_indices
         )
         flat_frames = tuple(
             image
-            for field_name, image in self._images_by_field.items()
-            if getattr(self, field_name) == "flat"
+            for index, image in enumerate(self._images)
+            if index not in dark_frame_indices
         )
         if not dark_frames:
             raise RecipeValidationError(_("Assign at least one dark frame"))

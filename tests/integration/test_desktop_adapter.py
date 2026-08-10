@@ -15,6 +15,9 @@ from datalab.recipes import (
     RecipeValidationError,
 )
 from datalab.tests import datalab_test_app_context
+from guidata.dataset.qtitemwidgets import MultipleChoiceWidget
+from guidata.dataset.qtwidgets import DataSetEditDialog
+from qtpy.QtWidgets import QCheckBox, QRadioButton
 from sigima.objects import ImageObj, create_image
 
 from datalab_camera_characterization import PLUGIN_ID
@@ -150,6 +153,47 @@ def test_input_role_parameters_assign_every_selected_image_once() -> None:
     }
 
 
+def test_input_role_parameters_use_one_compact_three_column_grid() -> None:
+    """A large campaign renders one checklist instead of one block per image."""
+    images = tuple(
+        _frame(f"{'dark' if index < 4 else 'flat'} {index + 1}", index)
+        for index in range(13)
+    )
+
+    roles = CameraInputRoleParameters.create(images)
+    items = roles.get_items()
+
+    assert len(items) == 1
+    assert isinstance(items[0], desktop_adapter.gds.MultipleChoiceItem)
+    assert items[0].get_prop("display", "shape") == (-1, 3)
+    assert len(items[0].get_prop("data", "choices")) == len(images)
+    assert roles.dark_frame_indices == (0, 1, 2, 3)
+    inputs = roles.to_recipe_inputs()
+    assert inputs["dark_frames"] + inputs["flat_frames"] == images
+
+
+def test_input_role_dialog_renders_thirteen_images_in_five_rows() -> None:
+    """The Qt editor remains compact for a representative Camera campaign."""
+    images = tuple(
+        _frame(f"{'dark' if index < 4 else 'flat'} {index + 1}", index)
+        for index in range(13)
+    )
+    roles = CameraInputRoleParameters.create(images)
+
+    with (
+        execenv.context(unattended=True),
+        datalab_test_app_context(console=False, exec_loop=False) as window,
+    ):
+        dialog = DataSetEditDialog(roles, parent=window)
+        widget = dialog.edit_layout[0].widgets[0]
+
+        assert isinstance(widget, MultipleChoiceWidget)
+        assert len(dialog.findChildren(QCheckBox)) == len(images)
+        assert dialog.findChildren(QRadioButton) == []
+        assert widget.groupbox.layout().rowCount() == 5
+        assert widget.groupbox.layout().columnCount() == 3
+
+
 @pytest.mark.parametrize(
     ("role", "message"),
     [
@@ -164,8 +208,7 @@ def test_input_role_parameters_reject_invalid_assignments(
     """Campaigns containing only one role stop before recipe execution."""
     images = tuple(_frame(f"frame {index}", index) for index in range(3))
     roles = CameraInputRoleParameters.create(images)
-    for field_name in roles._images_by_field:
-        setattr(roles, field_name, role)
+    roles.dark_frame_indices = () if role == "flat" else tuple(range(len(images)))
 
     with pytest.raises(RecipeValidationError, match=message):
         roles.to_recipe_inputs()
@@ -177,8 +220,7 @@ def test_desktop_role_editor_reopens_after_invalid_assignment(
     """An invalid role split warns and preserves the form for correction."""
     images = (_frame("frame 1", 10), _frame("frame 2", 20))
     roles = desktop_adapter.CameraInputRoleParameters.create(images)
-    for field_name in roles._images_by_field:
-        setattr(roles, field_name, "flat")
+    roles.dark_frame_indices = ()
     edit_count = 0
     warnings: list[str] = []
 
@@ -186,7 +228,7 @@ def test_desktop_role_editor_reopens_after_invalid_assignment(
         nonlocal edit_count
         edit_count += 1
         if edit_count == 2:
-            setattr(roles, next(iter(roles._images_by_field)), "dark")
+            roles.dark_frame_indices = (0,)
         return True
 
     plugin = desktop_adapter.CameraDetectorCharacterizationPlugin()

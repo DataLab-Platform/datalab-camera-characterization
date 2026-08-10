@@ -42,3 +42,5 @@ All notable changes to this project will be documented in this file.
   project remains Alpha while those external evidence artifacts are absent.
 - Connect the DataLab Applications catalog to the existing Camera workflow,
   packaged quickstart, and project documentation.
+- Replace the per-image Dark/Flat radio blocks with one compact Dark-frame
+  checklist where unchecked images are assigned to Flat.
