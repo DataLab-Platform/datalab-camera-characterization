@@ -40,3 +40,5 @@ All notable changes to this project will be documented in this file.
 - Add a fail-closed Stable evidence gate for a hashed real camera campaign,
   documented validation, and approved independent scientific review; the
   project remains Alpha while those external evidence artifacts are absent.
+- Connect the DataLab Applications catalog to the existing Camera workflow,
+  packaged quickstart, and project documentation.

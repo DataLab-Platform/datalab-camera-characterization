@@ -42,7 +42,13 @@ def test_plugin_descriptor() -> None:
         }
     )
     assert CameraDetectorCharacterizationPlugin.get_recipes() == (RELATIVE_DN_RECIPE,)
+    assert CameraDetectorCharacterizationPlugin.get_recipe_launchers() == {
+        RELATIVE_DN_RECIPE.recipe_id: "run_relative_dn_from_selection"
+    }
     assert CameraDetectorCharacterizationPlugin.get_examples() == (CAMERA_QUICKSTART,)
+    assert CameraDetectorCharacterizationPlugin.PLUGIN_INFO.documentation_url == (
+        "https://github.com/DataLab-Platform/datalab-camera-characterization"
+    )
     assert CAMERA_QUICKSTART.resolve().is_file()
     assert CAMERA_QUICKSTART.recipe_id == RELATIVE_DN_RECIPE.recipe_id
     assert RELATIVE_DN_RECIPE.plugin_id == PLUGIN_ID
@@ -84,6 +90,9 @@ def test_desktop_parameter_editor_requires_registered_plugin() -> None:
 
     with pytest.raises(RuntimeError, match="registered"):
         plugin.open_quickstart()
+
+    with pytest.raises(RuntimeError, match="registered"):
+        plugin.launch_example(CAMERA_QUICKSTART.id)
 
 
 def test_desktop_forms_open_in_unattended_application() -> None:

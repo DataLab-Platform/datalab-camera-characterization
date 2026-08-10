@@ -113,8 +113,14 @@ class CameraDetectorCharacterizationPlugin(PluginBase):
             PluginCapability.APPLICATION,
             PluginCapability.PROCESSING,
         ),
+        documentation_url=(
+            "https://github.com/DataLab-Platform/datalab-camera-characterization"
+        ),
     )
     RECIPES = CAMERA_RECIPES
+    RECIPE_LAUNCHERS = {
+        RELATIVE_DN_RECIPE.recipe_id: "run_relative_dn_from_selection",
+    }
     EXAMPLES = (CAMERA_QUICKSTART,)
 
     @staticmethod
@@ -203,6 +209,11 @@ class CameraDetectorCharacterizationPlugin(PluginBase):
         images = self.imagepanel.objmodel.get_all_objects()
         self.imagepanel.objview.select_objects(images)
         return example
+
+    def launch_example(self, example_id: str) -> PluginExample | None:
+        """Open the catalog example through the Camera quickstart workflow."""
+        self.get_example(example_id)
+        return self.open_quickstart()
 
     def create_actions(self) -> None:
         """Create the complete relative-DN Camera workflow action."""
