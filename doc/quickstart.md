@@ -2,7 +2,15 @@
 
 The packaged quickstart produces a first relative-DN Camera characterization
 without writing Python. It uses a deterministic synthetic campaign containing
-four dark frames and four flat exposure levels with four frames per level.
+four dark frames and four flat exposure levels with four frames per level. All
+frames are 96 x 128 pixels and share one static synthetic sensor.
+
+The dark frames represent shutter-closed readout and expose bias, pixel/row/
+column fixed-pattern offsets, lower-right amplifier glow, read noise, and
+dead/hot pixels. The flat frames represent an illuminated uniform field, not a
+scene: exposure-dependent photocharge is modulated by vignetting, three soft
+dust shadows, PRNU, shot noise, and the same sensor defects. Metadata records
+the frame role and the enabled physical components.
 
 ## Run the Example
 
@@ -16,9 +24,9 @@ four dark frames and four flat exposure levels with four frames per level.
 5. Review the dark/flat assignments and recipe parameters, then accept both
    dialogs.
 
-Titles beginning with `Dark` are preassigned as dark frames. Every other image
-is preassigned as a flat frame. These assignments remain explicit and editable
-before execution.
+Titles beginning with `Dark` are preassigned in the compact **Dark frames**
+checklist. Unchecked images are assigned to Flat, so every selected image has
+exactly one role before execution.
 
 ## Expected Result
 
@@ -30,7 +38,9 @@ selected flat exposure.
 
 The example and current workflow are alpha, synthetic, relative-DN tools. They
 do not claim EMVA 1288 compliance, calibrated radiometry, or a normative camera
-assessment.
+assessment. The visible structures are pedagogical deterministic surrogates,
+not evidence that the simulator reproduces a particular camera or optical
+bench.
 
 ## Regenerate the Resource
 

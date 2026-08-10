@@ -31,7 +31,8 @@ shims, or host adapters. Tests enforce this dependency direction.
 ## Synthetic Frames
 
 The simulator models photoelectron shot noise, dark current, read noise, PRNU,
-DSNU, ADC saturation, quantization, and deterministic dead/hot pixels:
+pixel/row/column DSNU, amplifier glow, flat-field vignetting and dust shadows,
+ADC saturation, quantization, and deterministic dead/hot pixels:
 
 ```python
 from datalab_camera_characterization.core import (
@@ -113,6 +114,12 @@ packaged synthetic campaign containing four dark frames and four flat exposure
 levels. Then choose **Run camera characterization...** and accept the explicit
 role and parameter forms to obtain the response curve, spatial maps, profiles,
 distributions, and anchored metrics table without writing Python.
+
+The 96 x 128 dark frames represent shutter-closed sensor readout: bias,
+fixed-pattern banding, amplifier glow, read noise, and defective pixels. The
+flat frames represent an illuminated uniform field at four exposure times,
+with vignetting, dust shadows, PRNU, shot noise, and the same static defects.
+They are calibration acquisitions rather than arbitrary scene images.
 
 Opening the example asks before replacing a non-empty workspace. The complete
 walkthrough and expected results are documented in

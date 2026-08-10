@@ -37,8 +37,9 @@ increment. The recipe must satisfy both limits:
 - incremental WASM linear heap: at most 64 MiB;
 - retained signal/image arrays: at most three times the input-array bytes.
 
-The reference Windows/Chromium run on 2026-08-09 grew the WASM heap by
-0.00 MiB and retained 0.13 MiB of output arrays, or 0.86 times the input-array
+The reference Windows/Chromium run on 2026-08-10, using the structured 96 x 128
+quickstart frames, grew the WASM heap by 0.00 MiB and retained 0.39 MiB of
+output arrays, or 0.84 times the input-array
 bytes. The automated thresholds remain deliberately above this observation to
 allow WASM page rounding and browser variation while still detecting an
 unbounded working set.

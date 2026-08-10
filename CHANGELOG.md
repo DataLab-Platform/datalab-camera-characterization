@@ -44,3 +44,6 @@ All notable changes to this project will be documented in this file.
   packaged quickstart, and project documentation.
 - Replace the per-image Dark/Flat radio blocks with one compact Dark-frame
   checklist where unchecked images are assigned to Flat.
+- Give the packaged Camera quickstart physically meaningful dark frames with
+  readout banding, amplifier glow, and defects, and flat frames with a uniform
+  illuminated field, vignetting, dust shadows, PRNU, and shot noise.

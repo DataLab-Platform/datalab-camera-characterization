@@ -81,6 +81,9 @@ def test_relative_characterization_recovers_synthetic_camera_truth() -> None:
     expected_dark_noise_dn = math.sqrt(
         (READ_NOISE_E / CONVERSION_GAIN_E_PER_DN) ** 2 + 1.0 / 12.0
     )
+    expected_saturation_signal_dn = (
+        flats[-1].parameters.saturation_dn - dark.parameters.offset_dn
+    )
     fitted_exposures = np.asarray(EXPOSURE_TIMES_S)[result.linear_fit_mask]
     expected_fitted_signal_dn = expected_slope_dn_per_s * fitted_exposures
 
@@ -104,7 +107,10 @@ def test_relative_characterization_recovers_synthetic_camera_truth() -> None:
         (True, True, True, True, True, False),
     )
     assert result.saturation_onset_exposure_s == 20.0
-    assert result.saturation_onset_signal_dn == pytest.approx(3_895.0, abs=0.2)
+    assert result.saturation_onset_signal_dn == pytest.approx(
+        expected_saturation_signal_dn,
+        abs=0.2,
+    )
 
 
 def test_spatial_characterization_recovers_static_synthetic_maps() -> None:
@@ -120,6 +126,12 @@ def test_spatial_characterization_recovers_static_synthetic_maps() -> None:
         dark_current_e_per_s=0.0,
         prnu_fraction=0.02,
         dsnu_dn=1.5,
+        row_pattern_dn=3.0,
+        column_pattern_dn=2.0,
+        amplifier_glow_dn=20.0,
+        vignetting_fraction=0.20,
+        dust_shadow_count=2,
+        dust_shadow_depth_fraction=0.15,
         saturation_dn=4_095.0,
         bit_depth=12,
         shot_noise=False,
@@ -141,9 +153,8 @@ def test_spatial_characterization_recovers_static_synthetic_maps() -> None:
     )
 
     expected_dsnu_map = dark.truth.dsnu_map_dn - np.mean(dark.truth.dsnu_map_dn)
-    expected_prnu_map = (
-        flat.truth.prnu_gain_map / np.mean(flat.truth.prnu_gain_map) - 1.0
-    )
+    expected_flat_gain = flat.truth.prnu_gain_map * flat.truth.illumination_gain_map
+    expected_prnu_map = expected_flat_gain / np.mean(expected_flat_gain) - 1.0
     np.testing.assert_allclose(result.dsnu_like_map_dn, expected_dsnu_map, atol=1.0)
     np.testing.assert_allclose(
         result.prnu_like_map_fraction,

@@ -27,6 +27,7 @@ from datalab_camera_characterization.adapters.desktop import (
     CameraDetectorCharacterizationPlugin,
     CameraInputRoleParameters,
 )
+from datalab_camera_characterization.core import metadata_key
 from datalab_camera_characterization.workflow import (
     EXPOSURE_TIME_METADATA_KEY,
     RELATIVE_DN_RECIPE,
@@ -381,6 +382,29 @@ def test_desktop_quickstart_action_opens_and_runs_packaged_example(
         assert selected_images == input_images
         assert sum(image.title.startswith("Dark") for image in input_images) == 4
         assert flat_exposures == {0.005, 0.01, 0.02, 0.04}
+        dark_frame = input_images[0].data.astype(float)
+        flat_frame = input_images[-1].data.astype(float)
+        flat_edges = np.concatenate(
+            (
+                flat_frame[:12, :].ravel(),
+                flat_frame[-12:, :].ravel(),
+                flat_frame[:, :12].ravel(),
+                flat_frame[:, -12:].ravel(),
+            )
+        )
+        assert dark_frame.shape == (96, 128)
+        assert dark_frame[-16:, -16:].mean() > dark_frame[:16, :16].mean() + 20.0
+        assert np.count_nonzero(dark_frame == 4_095) == 6
+        assert np.count_nonzero(dark_frame == 0) == 6
+        assert flat_frame[32:64, 48:80].mean() > flat_edges.mean() + 100.0
+        assert np.count_nonzero(flat_frame == 4_095) == 6
+        assert np.count_nonzero(flat_frame == 0) == 6
+        assert input_images[0].metadata[metadata_key("frame_role")] == "dark"
+        assert input_images[-1].metadata[metadata_key("frame_role")] == "flat"
+        assert (
+            "vignetting"
+            in input_images[-1].metadata[metadata_key("illumination_structure")]
+        )
         assert plugin.run_relative_dn_action.isEnabled()
 
         # Real modal widgets are smoke-tested separately from this action flow.

@@ -1,5 +1,7 @@
 """Tests for deterministic synthetic Camera frames."""
 
+from dataclasses import replace
+
 import numpy as np
 import pytest
 
@@ -27,6 +29,7 @@ def test_simulation_is_reproducible_and_read_only() -> None:
     np.testing.assert_array_equal(first.frames_dn, second.frames_dn)
     for field_name in (
         "prnu_gain_map",
+        "illumination_gain_map",
         "dsnu_map_dn",
         "expected_electrons_map",
         "expected_dn_map",
@@ -70,6 +73,65 @@ def test_noiseless_model_converts_electrons_to_dn() -> None:
         np.full((2, 3), 24.0),
     )
     assert result.frames_dn.dtype == np.uint8
+
+
+def test_structured_dark_and_flat_maps_have_exact_physical_roles() -> None:
+    """Readout structure is additive while flat illumination is multiplicative."""
+    parameters = CameraSimulationParameters(
+        shape=(48, 64),
+        frame_count=1,
+        exposure_time_s=0.1,
+        signal_electrons=1_000.0,
+        offset_dn=100.0,
+        conversion_gain_e_per_dn=2.0,
+        read_noise_e=0.0,
+        dark_current_e_per_s=0.0,
+        prnu_fraction=0.0,
+        dsnu_dn=0.0,
+        row_pattern_dn=3.0,
+        column_pattern_dn=2.0,
+        amplifier_glow_dn=25.0,
+        vignetting_fraction=0.25,
+        dust_shadow_count=3,
+        dust_shadow_depth_fraction=0.20,
+        saturation_dn=4_095.0,
+        bit_depth=12,
+        shot_noise=False,
+        seed=53,
+    )
+
+    flat = simulate_camera_frames(parameters)
+    dark = simulate_camera_frames(replace(parameters, signal_electrons=0.0))
+    illumination = flat.truth.illumination_gain_map
+    expected_electrons = parameters.signal_electrons * illumination
+
+    assert np.mean(illumination) == pytest.approx(1.0)
+    assert np.mean(illumination[:4, :]) < np.mean(illumination[20:28, 24:40])
+    assert np.std(np.mean(flat.truth.dsnu_map_dn, axis=1)) > 2.5
+    assert np.std(np.mean(flat.truth.dsnu_map_dn, axis=0)) > 1.5
+    assert flat.truth.dsnu_map_dn[-1, -1] > flat.truth.dsnu_map_dn[0, 0]
+    np.testing.assert_allclose(
+        flat.truth.expected_electrons_map,
+        expected_electrons,
+    )
+    np.testing.assert_allclose(
+        flat.truth.expected_dn_map,
+        parameters.offset_dn
+        + flat.truth.dsnu_map_dn
+        + expected_electrons / parameters.conversion_gain_e_per_dn,
+    )
+    np.testing.assert_array_equal(
+        dark.truth.illumination_gain_map,
+        illumination,
+    )
+    np.testing.assert_array_equal(
+        dark.truth.expected_electrons_map,
+        np.zeros(parameters.shape),
+    )
+    np.testing.assert_allclose(
+        dark.truth.expected_dn_map,
+        parameters.offset_dn + dark.truth.dsnu_map_dn,
+    )
 
 
 def test_defective_pixels_are_disjoint_and_applied_to_every_frame() -> None:
@@ -145,6 +207,7 @@ def test_static_truth_maps_do_not_depend_on_acquisition_length_or_signal() -> No
 
     for field_name in (
         "prnu_gain_map",
+        "illumination_gain_map",
         "dsnu_map_dn",
         "dead_pixel_mask",
         "hot_pixel_mask",
@@ -235,6 +298,11 @@ def test_read_noise_has_configured_electron_deviation() -> None:
         ({"frame_count": True}, TypeError),
         ({"conversion_gain_e_per_dn": 0.0}, ValueError),
         ({"read_noise_e": -1.0}, ValueError),
+        ({"row_pattern_dn": -1.0}, ValueError),
+        ({"vignetting_fraction": 1.0}, ValueError),
+        ({"dust_shadow_count": -1}, ValueError),
+        ({"dust_shadow_count": 1.5}, TypeError),
+        ({"dust_shadow_depth_fraction": 1.0}, ValueError),
         ({"prnu_fraction": 1.0}, ValueError),
         ({"defective_pixel_fraction": 1.1}, ValueError),
         ({"saturation_dn": 4_096.0}, ValueError),

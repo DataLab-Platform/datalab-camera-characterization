@@ -29,7 +29,7 @@ from datalab_camera_characterization.workflow import (
 )
 
 PROJECT_ROOT = Path(__file__).parents[2]
-QUICKSTART_SHA256 = "5875333EE7561A6C73AD9C690E5790D9A0BC081586122F33E0BEB001FE690FBF"
+QUICKSTART_SHA256 = "0BD260EF9D11AC977F61F92C062EE28D298A498576B9FBEC9BECF49E6357E341"
 
 
 def _camera_plugins() -> list[CameraDetectorCharacterizationPlugin]:
@@ -122,7 +122,7 @@ print(json.dumps({
         ),
         "plugin_id": PLUGIN_ID,
         "recipe_id": RELATIVE_DN_RECIPE.recipe_id,
-        "resource_size": 285_344,
+        "resource_size": 624_248,
         "resource_sha256": QUICKSTART_SHA256,
     }
 

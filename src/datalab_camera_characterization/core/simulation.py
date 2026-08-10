@@ -14,11 +14,14 @@ class CameraSimulationParameters:
 
     ``conversion_gain_e_per_dn`` is expressed in electrons per digital number.
     ``signal_electrons`` is the mean photoelectron count per pixel and frame,
-    before applying the static PRNU gain map. ``prnu_fraction`` is the relative
-    standard deviation of that unit-mean gain map, while ``dsnu_dn`` is the
-    standard deviation of a signed, zero-mean offset map in DN. The requested
-    defective-pixel fraction is rounded to the nearest whole pixel, then split
-    as evenly as possible between dead and hot pixels.
+    before applying the static PRNU and illumination gain maps.
+    ``prnu_fraction`` is the relative standard deviation of the unit-mean
+    sensor gain map, while vignetting and dust shadows define a separate
+    unit-mean optical illumination map. ``dsnu_dn`` controls signed pixel
+    offsets; row, column, and amplifier-glow parameters add fixed readout
+    structure to the same DN offset map. The requested defective-pixel fraction
+    is rounded to the nearest whole pixel, then split as evenly as possible
+    between dead and hot pixels.
     """
 
     shape: tuple[int, int] = (64, 64)
@@ -31,6 +34,12 @@ class CameraSimulationParameters:
     dark_current_e_per_s: float = 0.1
     prnu_fraction: float = 0.01
     dsnu_dn: float = 1.0
+    row_pattern_dn: float = 0.0
+    column_pattern_dn: float = 0.0
+    amplifier_glow_dn: float = 0.0
+    vignetting_fraction: float = 0.0
+    dust_shadow_count: int = 0
+    dust_shadow_depth_fraction: float = 0.0
     saturation_dn: float = 4_095.0
     bit_depth: int = 12
     defective_pixel_fraction: float = 0.0
@@ -66,6 +75,20 @@ class CameraSimulationParameters:
         _validate_nonnegative(self.read_noise_e, "Read noise")
         _validate_nonnegative(self.dark_current_e_per_s, "Dark current")
         _validate_nonnegative(self.dsnu_dn, "DSNU")
+        _validate_nonnegative(self.row_pattern_dn, "Row-pattern amplitude")
+        _validate_nonnegative(self.column_pattern_dn, "Column-pattern amplitude")
+        _validate_nonnegative(self.amplifier_glow_dn, "Amplifier-glow amplitude")
+        _validate_fraction(
+            self.vignetting_fraction,
+            "Vignetting fraction",
+            upper_inclusive=False,
+        )
+        _validate_nonnegative_integer(self.dust_shadow_count, "Dust-shadow count")
+        _validate_fraction(
+            self.dust_shadow_depth_fraction,
+            "Dust-shadow depth fraction",
+            upper_inclusive=False,
+        )
         _validate_positive(self.saturation_dn, "Saturation")
         _validate_fraction(self.prnu_fraction, "PRNU fraction", upper_inclusive=False)
         _validate_fraction(
@@ -86,6 +109,7 @@ class CameraSimulationTruth:
 
     seed: int
     prnu_gain_map: np.ndarray
+    illumination_gain_map: np.ndarray
     dsnu_map_dn: np.ndarray
     expected_electrons_map: np.ndarray
     expected_dn_map: np.ndarray
@@ -146,6 +170,14 @@ def _validate_positive_integer(value: int, name: str) -> None:
         raise ValueError(f"{name} must be positive")
 
 
+def _validate_nonnegative_integer(value: int, name: str) -> None:
+    """Validate a non-negative built-in integer."""
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise TypeError(f"{name} must be an integer")
+    if value < 0:
+        raise ValueError(f"{name} must be non-negative")
+
+
 def _readonly(array: np.ndarray) -> np.ndarray:
     """Mark an owned simulation array as read-only and return it."""
     array.setflags(write=False)
@@ -179,15 +211,89 @@ def _defective_pixel_masks(
     return dead_mask.reshape(shape), hot_mask.reshape(shape)
 
 
+def _unit_deviation_pattern(
+    length: int,
+    rng: np.random.Generator,
+) -> np.ndarray:
+    """Return one deterministic zero-mean pattern with unit deviation."""
+    values = rng.normal(size=length)
+    values -= np.mean(values)
+    deviation = np.std(values)
+    if deviation:
+        values /= deviation
+    return values
+
+
+def _structured_offset_map(
+    parameters: CameraSimulationParameters,
+    rng: np.random.Generator,
+) -> np.ndarray:
+    """Return fixed row/column readout structure and amplifier glow in DN."""
+    height, width = parameters.shape
+    row_pattern = (
+        parameters.row_pattern_dn * _unit_deviation_pattern(height, rng)[:, np.newaxis]
+    )
+    column_pattern = (
+        parameters.column_pattern_dn
+        * _unit_deviation_pattern(width, rng)[np.newaxis, :]
+    )
+    y_grid, x_grid = np.mgrid[:height, :width].astype(float)
+    x_distance = (width - 1 - x_grid) / max(width - 1, 1)
+    y_distance = (height - 1 - y_grid) / max(height - 1, 1)
+    amplifier_glow = parameters.amplifier_glow_dn * np.exp(
+        -0.5 * ((x_distance / 0.22) ** 2 + (y_distance / 0.30) ** 2)
+    )
+    return row_pattern + column_pattern + amplifier_glow
+
+
+def _illumination_gain_map(
+    parameters: CameraSimulationParameters,
+    rng: np.random.Generator,
+) -> np.ndarray:
+    """Return a unit-mean flat-field illumination/transmission map."""
+    height, width = parameters.shape
+    y_grid, x_grid = np.mgrid[:height, :width].astype(float)
+    x_center = 0.5 * (width - 1)
+    y_center = 0.5 * (height - 1)
+    x_normalized = (x_grid - x_center) / max(x_center, 1.0)
+    y_normalized = (y_grid - y_center) / max(y_center, 1.0)
+    corner_radius_squared = 2.0
+    radial_fraction = np.clip(
+        (x_normalized**2 + y_normalized**2) / corner_radius_squared,
+        0.0,
+        1.0,
+    )
+    vignetting = 1.0 - parameters.vignetting_fraction * radial_fraction
+
+    dust_transmission = np.ones(parameters.shape, dtype=float)
+    minimum_dimension = min(parameters.shape)
+    for _index in range(parameters.dust_shadow_count):
+        center_x = rng.uniform(0.15, 0.85) * (width - 1)
+        center_y = rng.uniform(0.15, 0.85) * (height - 1)
+        radius_x = rng.uniform(0.035, 0.075) * minimum_dimension
+        radius_y = rng.uniform(0.035, 0.075) * minimum_dimension
+        squared_radius = ((x_grid - center_x) / radius_x) ** 2 + (
+            (y_grid - center_y) / radius_y
+        ) ** 2
+        dust_transmission *= 1.0 - parameters.dust_shadow_depth_fraction * np.exp(
+            -0.5 * squared_radius
+        )
+
+    illumination = vignetting * dust_transmission
+    illumination /= np.mean(illumination)
+    return illumination
+
+
 def simulate_camera_frames(
     parameters: CameraSimulationParameters,
 ) -> CameraSimulationResult:
     """Generate a deterministic stack of quantized camera frames.
 
-    The model applies static PRNU to photoelectrons, adds dark-current
-    electrons, optional Poisson shot noise and Gaussian read noise, converts to
-    DN, adds offset and static DSNU, applies defective pixels, then clips and
-    quantizes to the configured ADC range.
+    The model applies static PRNU and flat-field illumination to
+    photoelectrons, adds dark-current electrons, optional Poisson shot noise
+    and Gaussian read noise, converts to DN, adds the sensor-wide offset and
+    fixed pixel/row/column/glow structure, applies defective pixels, then clips
+    and quantizes to the configured ADC range.
 
     Args:
         parameters: Camera model and acquisition settings
@@ -195,8 +301,8 @@ def simulate_camera_frames(
     Returns:
         Read-only frames and exact static/noiseless ground truth
     """
-    seed_sequences = np.random.SeedSequence(parameters.seed).spawn(4)
-    prnu_rng, dsnu_rng, defect_rng, frame_rng = (
+    seed_sequences = np.random.SeedSequence(parameters.seed).spawn(6)
+    prnu_rng, dsnu_rng, defect_rng, frame_rng, pattern_rng, illumination_rng = (
         np.random.default_rng(seed_sequence) for seed_sequence in seed_sequences
     )
 
@@ -211,6 +317,8 @@ def simulate_camera_frames(
         scale=parameters.dsnu_dn,
         size=parameters.shape,
     )
+    dsnu_map_dn += _structured_offset_map(parameters, pattern_rng)
+    illumination_gain_map = _illumination_gain_map(parameters, illumination_rng)
     dead_pixel_mask, hot_pixel_mask = _defective_pixel_masks(
         parameters.shape,
         parameters.defective_pixel_fraction,
@@ -218,7 +326,7 @@ def simulate_camera_frames(
     )
 
     expected_electrons_map = (
-        parameters.signal_electrons * prnu_gain_map
+        parameters.signal_electrons * prnu_gain_map * illumination_gain_map
         + parameters.dark_current_e_per_s * parameters.exposure_time_s
     )
     frame_shape = (parameters.frame_count, *parameters.shape)
@@ -254,6 +362,7 @@ def simulate_camera_frames(
     truth = CameraSimulationTruth(
         seed=parameters.seed,
         prnu_gain_map=_readonly(prnu_gain_map),
+        illumination_gain_map=_readonly(illumination_gain_map),
         dsnu_map_dn=_readonly(dsnu_map_dn),
         expected_electrons_map=_readonly(expected_electrons_map),
         expected_dn_map=_readonly(expected_dn_map),

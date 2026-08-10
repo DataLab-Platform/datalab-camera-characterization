@@ -26,11 +26,18 @@ OUTPUT_FILE = (
     / "examples"
     / "camera_quickstart.h5"
 )
-FRAME_SHAPE = (64, 64)
+FRAME_SHAPE = (96, 128)
 FRAMES_PER_SERIES = 4
 FLAT_EXPOSURES_S = (0.005, 0.01, 0.02, 0.04)
 PHOTOELECTRON_RATE_E_PER_S = 60_000.0
 SIMULATION_SEED = 20260809
+ROW_PATTERN_DN = 3.0
+COLUMN_PATTERN_DN = 2.0
+AMPLIFIER_GLOW_DN = 30.0
+VIGNETTING_FRACTION = 0.25
+DUST_SHADOW_COUNT = 3
+DUST_SHADOW_DEPTH_FRACTION = 0.18
+DEFECTIVE_PIXEL_FRACTION = 0.001
 QUICKSTART_UUID_NAMESPACE = uuid5(
     NAMESPACE_URL,
     f"https://datalab-platform.com/plugins/{PLUGIN_ID}/quickstart",
@@ -59,9 +66,15 @@ def _simulate_series(
         dark_current_e_per_s=0.2,
         prnu_fraction=0.01,
         dsnu_dn=1.0,
+        row_pattern_dn=ROW_PATTERN_DN,
+        column_pattern_dn=COLUMN_PATTERN_DN,
+        amplifier_glow_dn=AMPLIFIER_GLOW_DN,
+        vignetting_fraction=VIGNETTING_FRACTION,
+        dust_shadow_count=DUST_SHADOW_COUNT,
+        dust_shadow_depth_fraction=DUST_SHADOW_DEPTH_FRACTION,
         saturation_dn=4_095.0,
         bit_depth=12,
-        defective_pixel_fraction=0.0,
+        defective_pixel_fraction=DEFECTIVE_PIXEL_FRACTION,
         seed=SIMULATION_SEED,
     )
     result = simulate_camera_frames(parameters)
@@ -75,8 +88,18 @@ def _simulate_series(
         image.metadata[metadata_key("synthetic")] = True
         image.metadata[metadata_key("simulation_seed")] = SIMULATION_SEED
         image.metadata[metadata_key("signal_electrons")] = signal_electrons
+        image.metadata[metadata_key("frame_role")] = (
+            "dark" if signal_electrons == 0.0 else "flat"
+        )
+        image.metadata[metadata_key("sensor_structure")] = (
+            "bias, pixel DSNU, row/column fixed pattern, amplifier glow, "
+            "read noise, dead/hot pixels"
+        )
         if signal_electrons > 0.0:
             image.metadata[EXPOSURE_TIME_METADATA_KEY] = exposure_time_s
+            image.metadata[metadata_key("illumination_structure")] = (
+                "uniform field with vignetting and dust shadows"
+            )
         images.append(image)
     return tuple(images)
 
