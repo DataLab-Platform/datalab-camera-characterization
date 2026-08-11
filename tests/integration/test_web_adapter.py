@@ -41,7 +41,7 @@ def test_web_adapter_declares_verified_version_matrix_and_quickstart() -> None:
         "plugin_id": PLUGIN_ID,
         "plugin_version": __version__,
         "web_status": "verified",
-        "datalab_web_version": "0.8.0",
+        "datalab_web_version": "0.9.0",
         "pyodide_version": "0.26.4",
         "recipe_id": RELATIVE_DN_RECIPE.recipe_id,
         "recipe_version": RELATIVE_DN_RECIPE.version,

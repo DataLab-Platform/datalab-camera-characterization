@@ -23,16 +23,14 @@ from ..workflow import (
 )
 
 WEB_STATUS = "verified"
-DATALAB_WEB_VERSION = "0.8.0"
+DATALAB_WEB_VERSION = "0.9.0"
 PYODIDE_VERSION = "0.26.4"
 QUICKSTART_FILENAME = "camera_quickstart.h5"
 
 CAMERA_QUICKSTART = PluginExample(
     id="quickstart",
     title="Synthetic camera characterization",
-    resource=(
-        "datalab_camera_characterization:examples/camera_quickstart.h5"
-    ),
+    resource=("datalab_camera_characterization:examples/camera_quickstart.h5"),
     description="Physically structured dark and flat frames for relative-DN analysis.",
     recipe_id=RELATIVE_DN_RECIPE.recipe_id,
 )

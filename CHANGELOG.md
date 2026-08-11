@@ -35,7 +35,7 @@ All notable changes to this project will be documented in this file.
 - Qualify the bundled recipe in Chromium/Pyodide with visible response-curve,
   PRNU-map, and metrics-table assertions, transactional cross-panel commit,
   persisted provenance, rollback coverage, and explicit memory budgets.
-- Promote the pinned DataLab-Web 0.8.0 / Pyodide 0.26.4 compatibility matrix
+- Promote the pinned DataLab-Web 0.9.0 / Pyodide 0.26.4 compatibility matrix
   to `verified` after its visible-output and memory qualification passed.
 - Add a fail-closed Stable evidence gate for a hashed real camera campaign,
   documented validation, and approved independent scientific review; the

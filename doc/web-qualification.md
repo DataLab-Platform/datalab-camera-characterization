@@ -4,7 +4,7 @@ The Camera Web adapter is tested against one explicit browser matrix:
 
 | Component          | Version |
 | ------------------ | ------- |
-| DataLab-Web        | 0.8.0   |
+| DataLab-Web        | 0.9.0   |
 | Pyodide            | 0.26.4  |
 | Camera plugin      | 0.1.0   |
 | Relative-DN recipe | 1.1.0   |
@@ -37,7 +37,7 @@ increment. The recipe must satisfy both limits:
 - incremental WASM linear heap: at most 64 MiB;
 - retained signal/image arrays: at most three times the input-array bytes.
 
-The reference Windows/Chromium run on 2026-08-10, using the structured 96 x 128
+The reference Windows/Chromium run on 2026-08-11, using the structured 96 x 128
 quickstart frames, grew the WASM heap by 0.00 MiB and retained 0.39 MiB of
 output arrays, or 0.84 times the input-array
 bytes. The automated thresholds remain deliberately above this observation to

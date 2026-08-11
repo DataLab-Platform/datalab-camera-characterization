@@ -127,7 +127,7 @@ walkthrough and expected results are documented in
 
 ## DataLab Web Integration
 
-DataLab-Web 0.8.0 explicitly bundles the pure-Python Camera wheel and adds that
+DataLab-Web 0.9.0 explicitly bundles the pure-Python Camera wheel and adds that
 local artifact to Pyodide's import path. The browser does not discover the
 Desktop entry point and does not download the plugin from a package index at
 runtime. The adapter declares the pinned DataLab-Web, Pyodide, plugin, and
