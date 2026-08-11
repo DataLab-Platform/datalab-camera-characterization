@@ -159,7 +159,9 @@ def test_entry_point_plugin_reload_keeps_one_instance_and_menu() -> None:
                 for action in window.imagepanel.get_category_actions(
                     ActionCategory.PLUGINS
                 )
-                if hasattr(action, "title") and action.title() == PLUGIN_NAME
+                # Menu titles escape "&" (Qt mnemonic marker).
+                if hasattr(action, "title")
+                and action.title() == PLUGIN_NAME.replace("&", "&&")
             ]
             assert len(menus) == 1
             window.imagepanel.acthandler.selected_objects_changed([], [])

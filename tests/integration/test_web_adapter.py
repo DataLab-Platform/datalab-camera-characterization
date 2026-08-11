@@ -4,15 +4,15 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
-from datalab.recipes import RecipeValidationError
 from datalab.plugins import PluginCapability
+from datalab.recipes import RecipeValidationError
 from sigima.objects import create_image
 
 from datalab_camera_characterization import PLUGIN_ID, __version__
 from datalab_camera_characterization.adapters.web import (
     CAMERA_QUICKSTART,
-    CameraDetectorCharacterizationWebPlugin,
     WEB_STATUS,
+    CameraDetectorCharacterizationWebPlugin,
     build_recipe_inputs,
     get_web_manifest,
     read_quickstart_bytes,
