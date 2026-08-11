@@ -5,6 +5,8 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from importlib import resources
 
+from datalab.plugin_examples import PluginExample
+from datalab.plugins import PluginBase, PluginCapability, PluginInfo
 from datalab.recipes import (
     RecipeExecutionContext,
     RecipeInputs,
@@ -13,7 +15,7 @@ from datalab.recipes import (
 )
 from sigima.objects import ImageObj
 
-from .. import PLUGIN_ID, __version__
+from .. import PLUGIN_DESCRIPTION, PLUGIN_ID, PLUGIN_NAME, __version__
 from ..workflow import (
     EXPOSURE_TIME_METADATA_KEY,
     RELATIVE_DN_RECIPE,
@@ -24,6 +26,62 @@ WEB_STATUS = "verified"
 DATALAB_WEB_VERSION = "0.8.0"
 PYODIDE_VERSION = "0.26.4"
 QUICKSTART_FILENAME = "camera_quickstart.h5"
+
+CAMERA_QUICKSTART = PluginExample(
+    id="quickstart",
+    title="Synthetic camera characterization",
+    resource=(
+        "datalab_camera_characterization:examples/camera_quickstart.h5"
+    ),
+    description="Physically structured dark and flat frames for relative-DN analysis.",
+    recipe_id=RELATIVE_DN_RECIPE.recipe_id,
+)
+
+
+class CameraDetectorCharacterizationWebPlugin(PluginBase):
+    """Declare the Camera application contract supported by DataLab-Web."""
+
+    PLUGIN_INFO = PluginInfo(
+        id=PLUGIN_ID,
+        name=PLUGIN_NAME,
+        version=__version__,
+        description=PLUGIN_DESCRIPTION,
+        capabilities=(
+            PluginCapability.APPLICATION,
+            PluginCapability.PROCESSING,
+        ),
+        documentation_url=(
+            "https://github.com/DataLab-Platform/datalab-camera-characterization"
+        ),
+    )
+    RECIPES = (RELATIVE_DN_RECIPE,)
+    EXAMPLES = (CAMERA_QUICKSTART,)
+
+    def create_actions(self) -> None:
+        """Application actions are provided by DataLab-Web's generic host."""
+
+    @classmethod
+    def suggest_recipe_bindings(
+        cls,
+        recipe,
+        candidates: Sequence[ImageObj],
+    ) -> Mapping[str, Sequence[ImageObj]]:
+        """Suggest dark/flat roles from stable exposure-time metadata."""
+        if recipe != RELATIVE_DN_RECIPE:
+            return {}
+        images = tuple(candidates)
+        return {
+            "dark_frames": tuple(
+                image
+                for image in images
+                if EXPOSURE_TIME_METADATA_KEY not in image.metadata
+            ),
+            "flat_frames": tuple(
+                image
+                for image in images
+                if EXPOSURE_TIME_METADATA_KEY in image.metadata
+            ),
+        }
 
 
 def get_web_manifest() -> dict[str, str]:
@@ -97,6 +155,8 @@ def run_relative_dn_recipe(
 
 
 __all__ = [
+    "CAMERA_QUICKSTART",
+    "CameraDetectorCharacterizationWebPlugin",
     "DATALAB_WEB_VERSION",
     "PYODIDE_VERSION",
     "QUICKSTART_FILENAME",

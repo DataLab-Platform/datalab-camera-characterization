@@ -5,10 +5,13 @@ from __future__ import annotations
 import numpy as np
 import pytest
 from datalab.recipes import RecipeValidationError
+from datalab.plugins import PluginCapability
 from sigima.objects import create_image
 
 from datalab_camera_characterization import PLUGIN_ID, __version__
 from datalab_camera_characterization.adapters.web import (
+    CAMERA_QUICKSTART,
+    CameraDetectorCharacterizationWebPlugin,
     WEB_STATUS,
     build_recipe_inputs,
     get_web_manifest,
@@ -45,6 +48,16 @@ def test_web_adapter_declares_verified_version_matrix_and_quickstart() -> None:
         "quickstart_filename": "camera_quickstart.h5",
     }
     assert read_quickstart_bytes().startswith(b"\x89HDF\r\n\x1a\n")
+    assert CameraDetectorCharacterizationWebPlugin.get_plugin_id() == PLUGIN_ID
+    assert CameraDetectorCharacterizationWebPlugin.get_recipes() == (
+        RELATIVE_DN_RECIPE,
+    )
+    assert CameraDetectorCharacterizationWebPlugin.get_examples() == (
+        CAMERA_QUICKSTART,
+    )
+    assert PluginCapability.APPLICATION in (
+        CameraDetectorCharacterizationWebPlugin.PLUGIN_INFO.capabilities
+    )
 
 
 def test_web_adapter_maps_imported_images_and_runs_headless_recipe() -> None:
@@ -57,12 +70,17 @@ def test_web_adapter_maps_imported_images_and_runs_headless_recipe() -> None:
     )
 
     inputs = build_recipe_inputs((*dark, *flats))
+    suggested = CameraDetectorCharacterizationWebPlugin.suggest_recipe_bindings(
+        RELATIVE_DN_RECIPE,
+        (*dark, *flats),
+    )
     outcome = run_relative_dn_recipe(
         (*dark, *flats),
         {"saturation_dn": 100.0},
     )
 
     assert inputs == {"dark_frames": dark, "flat_frames": flats}
+    assert suggested == inputs
     assert outcome.objects[0].id == "response"
     assert {output.id for output in outcome.objects} >= {
         "dsnu_like_map",

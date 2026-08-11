@@ -221,7 +221,7 @@ class CameraDetectorCharacterizationPlugin(PluginBase):
     def create_actions(self) -> None:
         """Create the complete relative-DN Camera workflow action."""
         handler = self.imagepanel.acthandler
-        with handler.new_menu(PLUGIN_NAME):
+        with handler.new_menu(PLUGIN_NAME.replace("&", "&&")):
             self.open_quickstart_action = handler.new_action(
                 _("Open quickstart example"),
                 triggered=self.open_quickstart,
