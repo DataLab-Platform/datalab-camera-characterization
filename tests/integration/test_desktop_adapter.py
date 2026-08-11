@@ -340,6 +340,11 @@ def test_desktop_action_assigns_selection_and_commits_cross_panel_outputs(
 
         assert len(window.signalpanel) == 5
         assert len(window.imagepanel) == len(selected_images) + 5
+        last_output = window.signalpanel.objmodel.get_all_objects()[-1]
+        assert last_output.title == "PRNU-like distribution"
+        assert window.get_current_panel() == "signal"
+        assert window.signalpanel.objview.get_sel_objects() == [last_output]
+        assert window.signalpanel.objview.get_current_object() is last_output
         response = window.signalpanel[1]
         tables = list(TableAdapter.iterate_from_obj(response))
         assert len(tables) == 1
