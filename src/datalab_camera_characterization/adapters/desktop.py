@@ -203,9 +203,11 @@ class CameraDetectorCharacterizationPlugin(PluginBase):
             raise RuntimeError("Plugin must be registered before opening quickstart")
         if not self.main.confirm_memory_state():
             return None
-        if any(len(panel) for panel in self.main.panels) and not self.ask_yesno(
-            _("Opening the quickstart replaces the current workspace. Continue?"),
-            title=_("Open quickstart example"),
+        if any(len(panel) for panel in (self.signalpanel, self.imagepanel)) and not (
+            self.ask_yesno(
+                _("Opening the quickstart replaces the current workspace. Continue?"),
+                title=_("Open quickstart example"),
+            )
         ):
             return None
         example = self.open_example(CAMERA_QUICKSTART.id, reset_all=True)
