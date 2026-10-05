@@ -129,49 +129,38 @@ print(json.dumps({
 
 def test_entry_point_plugin_reload_keeps_one_instance_and_menu() -> None:
     """Desktop hot reload replaces the Camera plugin without action leaks."""
-    original_plugins_enabled = Conf.main.plugins_enabled.get(True)
-    original_enabled_list = Conf.main.plugins_enabled_list.get(None)
-    Conf.main.plugins_enabled.set(True)
-    Conf.main.plugins_enabled_list.set(None)
-    try:
-        with (
-            execenv.context(unattended=True),
-            datalab_test_app_context(console=False, exec_loop=False) as window,
-        ):
-            window.reload_plugins()
-            plugins_before = _camera_plugins()
-            assert len(plugins_before) == 1
-            plugin_before = plugins_before[0]
-            sources = plugin_before.__class__.__plugin_discovery_sources__
-            assert any(
-                "entry point 'datalab_camera_characterization'" in source
-                for source in sources
-            )
+    with (
+        Conf.plugins_enabled.context(True),
+        Conf.plugins_enabled_list.context(None),
+        execenv.context(unattended=True),
+        datalab_test_app_context(console=False, exec_loop=False) as window,
+    ):
+        window.reload_plugins()
+        plugins_before = _camera_plugins()
+        assert len(plugins_before) == 1
+        plugin_before = plugins_before[0]
+        sources = plugin_before.__class__.__plugin_discovery_sources__
+        assert any(
+            "entry point 'datalab_camera_characterization'" in source
+            for source in sources
+        )
 
-            window.reload_plugins()
+        window.reload_plugins()
 
-            plugins_after = _camera_plugins()
-            assert len(plugins_after) == 1
-            plugin_after = plugins_after[0]
-            assert plugin_after is not plugin_before
-            menus = [
-                action
-                for action in window.imagepanel.get_category_actions(
-                    ActionCategory.PLUGINS
-                )
-                # Menu titles escape "&" (Qt mnemonic marker).
-                if hasattr(action, "title")
-                and action.title() == PLUGIN_NAME.replace("&", "&&")
-            ]
-            assert len(menus) == 1
-            window.imagepanel.acthandler.selected_objects_changed([], [])
-            assert plugin_after.open_quickstart_action.isEnabled()
-    finally:
-        Conf.main.plugins_enabled.set(original_plugins_enabled)
-        if original_enabled_list is None:
-            Conf.main.plugins_enabled_list.remove()
-        else:
-            Conf.main.plugins_enabled_list.set(original_enabled_list)
+        plugins_after = _camera_plugins()
+        assert len(plugins_after) == 1
+        plugin_after = plugins_after[0]
+        assert plugin_after is not plugin_before
+        menus = [
+            action
+            for action in window.imagepanel.get_category_actions(ActionCategory.PLUGINS)
+            # Menu titles escape "&" (Qt mnemonic marker).
+            if hasattr(action, "title")
+            and action.title() == PLUGIN_NAME.replace("&", "&&")
+        ]
+        assert len(menus) == 1
+        window.imagepanel.acthandler.selected_objects_changed([], [])
+        assert plugin_after.open_quickstart_action.isEnabled()
 
 
 def test_camera_outputs_survive_native_h5_round_trip(tmp_path) -> None:
