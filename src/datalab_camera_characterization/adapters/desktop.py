@@ -24,6 +24,7 @@ from ..workflow import CAMERA_RECIPES, CameraRecipeParameters
 from ..workflow.recipes import RELATIVE_DN_RECIPE
 
 MINIMUM_SELECTED_FRAME_COUNT = 6
+PLUGIN_ICON = "datalab_camera_characterization:icons/camera_characterization.svg"
 
 CAMERA_QUICKSTART = PluginExample(
     id="quickstart",
@@ -112,6 +113,7 @@ class CameraDetectorCharacterizationPlugin(PluginBase):
         name=PLUGIN_NAME,
         version=__version__,
         description=PLUGIN_DESCRIPTION,
+        icon=PLUGIN_ICON,
         capabilities=(
             PluginCapability.APPLICATION,
             PluginCapability.PROCESSING,

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from importlib import resources
+
 import numpy as np
 import pytest
 from datalab.adapters_metadata import TableAdapter
@@ -20,7 +22,7 @@ from guidata.dataset.qtwidgets import DataSetEditDialog
 from qtpy.QtWidgets import QCheckBox, QRadioButton
 from sigima.objects import ImageObj, create_image
 
-from datalab_camera_characterization import PLUGIN_ID
+from datalab_camera_characterization import PLUGIN_DESCRIPTION, PLUGIN_ID, PLUGIN_NAME
 from datalab_camera_characterization.adapters import desktop as desktop_adapter
 from datalab_camera_characterization.adapters.desktop import (
     CAMERA_QUICKSTART,
@@ -59,6 +61,29 @@ def test_plugin_descriptor() -> None:
     assert RELATIVE_DN_RECIPE.plugin_version == "0.1.0"
     assert RELATIVE_DN_RECIPE.version == "1.1.0"
     assert RELATIVE_DN_RECIPE.parameter_class is CameraRecipeParameters
+
+
+def test_plugin_default_welcome_tile_uses_packaged_icon() -> None:
+    """Without declared tiles, the welcome page shows one application tile."""
+    icon = (
+        resources.files("datalab_camera_characterization")
+        / "icons"
+        / "camera_characterization.svg"
+    )
+
+    (tile,) = CameraDetectorCharacterizationPlugin.get_welcome_tiles()
+
+    assert CameraDetectorCharacterizationPlugin.PLUGIN_INFO.icon == (
+        desktop_adapter.PLUGIN_ICON
+    )
+    assert (tile.id, tile.title, tile.description, tile.icon, tile.launcher) == (
+        "application",
+        PLUGIN_NAME,
+        PLUGIN_DESCRIPTION,
+        desktop_adapter.PLUGIN_ICON,
+        None,
+    )
+    assert icon.is_file()
 
 
 @pytest.mark.parametrize("accepted", [True, False])

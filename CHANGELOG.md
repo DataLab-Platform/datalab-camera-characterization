@@ -47,3 +47,4 @@ All notable changes to this project will be documented in this file.
 - Give the packaged Camera quickstart physically meaningful dark frames with
   readout banding, amplifier glow, and defects, and flat frames with a uniform
   illuminated field, vignetting, dust shadows, PRNU, and shot noise.
+- Add a dedicated plugin icon, shown on the Camera tile of the DataLab welcome page.

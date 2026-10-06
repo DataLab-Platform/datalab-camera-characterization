@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <rect x="15" y="8" width="13" height="8" rx="2" fill="#546e7a"/>
+  <rect x="3" y="13" width="42" height="28" rx="5" fill="#546e7a"/>
+  <circle cx="38.5" cy="19" r="2" fill="#ef5350"/>
+  <circle cx="24" cy="27" r="11" fill="#263238"/>
+  <circle cx="24" cy="27" r="9" fill="#eceff1"/>
+  <g>
+    <rect x="18" y="21" width="3.4" height="3.4" rx="0.6" fill="#1565c0"/>
+    <rect x="22.3" y="21" width="3.4" height="3.4" rx="0.6" fill="#42a5f5"/>
+    <rect x="26.6" y="21" width="3.4" height="3.4" rx="0.6" fill="#90caf9"/>
+    <rect x="18" y="25.3" width="3.4" height="3.4" rx="0.6" fill="#42a5f5"/>
+    <rect x="22.3" y="25.3" width="3.4" height="3.4" rx="0.6" fill="#1e88e5"/>
+    <rect x="26.6" y="25.3" width="3.4" height="3.4" rx="0.6" fill="#42a5f5"/>
+    <rect x="18" y="29.6" width="3.4" height="3.4" rx="0.6" fill="#90caf9"/>
+    <rect x="22.3" y="29.6" width="3.4" height="3.4" rx="0.6" fill="#42a5f5"/>
+    <rect x="26.6" y="29.6" width="3.4" height="3.4" rx="0.6" fill="#ef5350"/>
+  </g>
+</svg>

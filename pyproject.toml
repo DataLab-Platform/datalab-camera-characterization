@@ -25,7 +25,7 @@ test = ["build >= 1.2", "psutil >= 5.8", "pytest", "ruff"]
 where = ["src"]
 
 [tool.setuptools.package-data]
-datalab_camera_characterization = ["examples/*.h5"]
+datalab_camera_characterization = ["examples/*.h5", "icons/*.svg"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

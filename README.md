@@ -125,6 +125,8 @@ Opening the example asks before replacing a non-empty workspace. The complete
 walkthrough and expected results are documented in
 [`doc/quickstart.md`](doc/quickstart.md).
 
+The DataLab welcome page also shows a **Camera & Detector Characterization** tile in its Applications section. The tile is derived from the plugin information and icon, and opens the Camera page of the **Applications** catalog.
+
 ## DataLab Web Integration
 
 DataLab-Web 0.9.0 explicitly bundles the pure-Python Camera wheel and adds that

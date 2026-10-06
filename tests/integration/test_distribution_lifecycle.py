@@ -80,6 +80,7 @@ def test_wheel_installs_and_resolves_entry_point_outside_checkout(tmp_path) -> N
 import hashlib
 import importlib
 import importlib.metadata as metadata
+import importlib.resources as resources
 import json
 
 distribution = next(metadata.distributions(path=[INSTALL_DIR]))
@@ -92,8 +93,10 @@ plugin_class = entry_point.load()
 example = plugin_class.get_example("quickstart")
 payload = example.resolve().read_bytes()
 module = importlib.import_module(plugin_class.__module__)
+icons = resources.files("datalab_camera_characterization") / "icons"
 print(json.dumps({
     "entry_point": entry_point.name,
+    "icons": sorted(icon.name for icon in icons.iterdir()),
     "module_file": module.__file__,
     "plugin_id": plugin_class.get_plugin_id(),
     "recipe_id": example.recipe_id,
@@ -117,6 +120,7 @@ print(json.dumps({
 
     assert result == {
         "entry_point": "datalab_camera_characterization",
+        "icons": ["camera_characterization.svg"],
         "module_file": os.fspath(
             install_dir / "datalab_camera_characterization" / "adapters" / "desktop.py"
         ),
