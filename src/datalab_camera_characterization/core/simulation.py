@@ -22,6 +22,15 @@ class CameraSimulationParameters:
     structure to the same DN offset map. The requested defective-pixel fraction
     is rounded to the nearest whole pixel, then split as evenly as possible
     between dead and hot pixels.
+
+    Dark-current structure is opt-in: ``dark_current_nonuniformity_fraction``
+    is the relative standard deviation of a unit-mean lognormal rate map,
+    ``dark_hot_pixel_fraction`` selects pixels whose rate is multiplied by
+    ``dark_hot_pixel_factor``, and ``amplifier_glow_e_per_s`` adds an
+    exposure-proportional glow with the same geometry as ``amplifier_glow_dn``.
+    A non-zero ``noise_stream`` draws temporal noise from an independent stream
+    while keeping every static map unchanged, so series simulated with the same
+    seed share the same sensor but not the same noise realization.
     """
 
     shape: tuple[int, int] = (64, 64)
@@ -45,6 +54,11 @@ class CameraSimulationParameters:
     defective_pixel_fraction: float = 0.0
     shot_noise: bool = True
     seed: int = 0
+    dark_current_nonuniformity_fraction: float = 0.0
+    dark_hot_pixel_fraction: float = 0.0
+    dark_hot_pixel_factor: float = 1.0
+    amplifier_glow_e_per_s: float = 0.0
+    noise_stream: int = 0
 
     def __post_init__(self) -> None:
         """Validate simulator parameters before allocating arrays."""
@@ -98,6 +112,28 @@ class CameraSimulationParameters:
         )
         if self.saturation_dn > 2**self.bit_depth - 1:
             raise ValueError("Saturation must fit within the configured bit depth")
+        _validate_fraction(
+            self.dark_current_nonuniformity_fraction,
+            "Dark-current non-uniformity fraction",
+            upper_inclusive=False,
+        )
+        _validate_fraction(
+            self.dark_hot_pixel_fraction,
+            "Dark hot-pixel fraction",
+            upper_inclusive=True,
+        )
+        _validate_positive(self.dark_hot_pixel_factor, "Dark hot-pixel factor")
+        _validate_nonnegative(self.amplifier_glow_e_per_s, "Amplifier-glow rate")
+        _validate_nonnegative_integer(self.noise_stream, "Noise stream")
+
+    @property
+    def has_dark_current_structure(self) -> bool:
+        """Return whether the dark-current rate varies across pixels."""
+        return bool(
+            self.dark_current_nonuniformity_fraction
+            or self.dark_hot_pixel_fraction
+            or self.amplifier_glow_e_per_s
+        )
 
 
 @dataclasses.dataclass(frozen=True)
@@ -105,6 +141,7 @@ class CameraSimulationTruth:
     """Static maps and noiseless expectation used to generate a frame series.
 
     ``expected_dn_map`` precedes defect overrides, clipping, and quantization.
+    ``dark_current_map_e_per_s`` includes exposure-proportional amplifier glow.
     """
 
     seed: int
@@ -115,6 +152,8 @@ class CameraSimulationTruth:
     expected_dn_map: np.ndarray
     dead_pixel_mask: np.ndarray
     hot_pixel_mask: np.ndarray
+    dark_current_map_e_per_s: np.ndarray
+    dark_hot_pixel_mask: np.ndarray
 
 
 @dataclasses.dataclass(frozen=True)
@@ -224,6 +263,15 @@ def _unit_deviation_pattern(
     return values
 
 
+def _amplifier_glow_profile(shape: tuple[int, int]) -> np.ndarray:
+    """Return the unit-peak lower-right amplifier-glow geometry."""
+    height, width = shape
+    y_grid, x_grid = np.mgrid[:height, :width].astype(float)
+    x_distance = (width - 1 - x_grid) / max(width - 1, 1)
+    y_distance = (height - 1 - y_grid) / max(height - 1, 1)
+    return np.exp(-0.5 * ((x_distance / 0.22) ** 2 + (y_distance / 0.30) ** 2))
+
+
 def _structured_offset_map(
     parameters: CameraSimulationParameters,
     rng: np.random.Generator,
@@ -237,13 +285,40 @@ def _structured_offset_map(
         parameters.column_pattern_dn
         * _unit_deviation_pattern(width, rng)[np.newaxis, :]
     )
-    y_grid, x_grid = np.mgrid[:height, :width].astype(float)
-    x_distance = (width - 1 - x_grid) / max(width - 1, 1)
-    y_distance = (height - 1 - y_grid) / max(height - 1, 1)
-    amplifier_glow = parameters.amplifier_glow_dn * np.exp(
-        -0.5 * ((x_distance / 0.22) ** 2 + (y_distance / 0.30) ** 2)
+    amplifier_glow = parameters.amplifier_glow_dn * _amplifier_glow_profile(
+        parameters.shape
     )
     return row_pattern + column_pattern + amplifier_glow
+
+
+def _dark_current_map(
+    parameters: CameraSimulationParameters,
+    rng: np.random.Generator,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Return the per-pixel dark-current rate (e-/s) and its hot-pixel mask."""
+    rate_map = np.full(parameters.shape, float(parameters.dark_current_e_per_s))
+    if parameters.dark_current_nonuniformity_fraction:
+        log_variance = math.log1p(parameters.dark_current_nonuniformity_fraction**2)
+        rate_map *= rng.lognormal(
+            mean=-0.5 * log_variance,
+            sigma=math.sqrt(log_variance),
+            size=parameters.shape,
+        )
+    pixel_count = math.prod(parameters.shape)
+    hot_count = min(
+        pixel_count,
+        int(round(parameters.dark_hot_pixel_fraction * pixel_count)),
+    )
+    hot_mask = np.zeros(pixel_count, dtype=bool)
+    if hot_count:
+        hot_mask[rng.choice(pixel_count, size=hot_count, replace=False)] = True
+    hot_mask = hot_mask.reshape(parameters.shape)
+    rate_map[hot_mask] *= parameters.dark_hot_pixel_factor
+    if parameters.amplifier_glow_e_per_s:
+        rate_map += parameters.amplifier_glow_e_per_s * _amplifier_glow_profile(
+            parameters.shape
+        )
+    return rate_map, hot_mask
 
 
 def _illumination_gain_map(
@@ -301,9 +376,18 @@ def simulate_camera_frames(
     Returns:
         Read-only frames and exact static/noiseless ground truth
     """
-    seed_sequences = np.random.SeedSequence(parameters.seed).spawn(6)
+    # Children 0-5 must keep their legacy order so existing seeds stay bitwise.
+    seed_sequences = np.random.SeedSequence(parameters.seed).spawn(7)
     prnu_rng, dsnu_rng, defect_rng, frame_rng, pattern_rng, illumination_rng = (
-        np.random.default_rng(seed_sequence) for seed_sequence in seed_sequences
+        np.random.default_rng(seed_sequence) for seed_sequence in seed_sequences[:6]
+    )
+    if parameters.noise_stream:
+        frame_rng = np.random.default_rng(
+            seed_sequences[3].spawn(parameters.noise_stream)[-1]
+        )
+    dark_current_map_e_per_s, dark_hot_pixel_mask = _dark_current_map(
+        parameters,
+        np.random.default_rng(seed_sequences[6]),
     )
 
     prnu_log_variance = math.log1p(parameters.prnu_fraction**2)
@@ -325,9 +409,13 @@ def simulate_camera_frames(
         defect_rng,
     )
 
+    if parameters.has_dark_current_structure:
+        dark_electrons = dark_current_map_e_per_s * parameters.exposure_time_s
+    else:
+        dark_electrons = parameters.dark_current_e_per_s * parameters.exposure_time_s
     expected_electrons_map = (
         parameters.signal_electrons * prnu_gain_map * illumination_gain_map
-        + parameters.dark_current_e_per_s * parameters.exposure_time_s
+        + dark_electrons
     )
     frame_shape = (parameters.frame_count, *parameters.shape)
     if parameters.shot_noise:
@@ -368,6 +456,8 @@ def simulate_camera_frames(
         expected_dn_map=_readonly(expected_dn_map),
         dead_pixel_mask=_readonly(dead_pixel_mask),
         hot_pixel_mask=_readonly(hot_pixel_mask),
+        dark_current_map_e_per_s=_readonly(dark_current_map_e_per_s),
+        dark_hot_pixel_mask=_readonly(dark_hot_pixel_mask),
     )
     return CameraSimulationResult(
         parameters=parameters,

@@ -21,12 +21,9 @@ the frame role and the enabled physical components.
    20 example images are loaded in five groups and selected automatically.
 4. Choose **Plugins > Camera & Detector Characterization > Run camera
    characterization...**.
-5. Review the dark/flat assignments and recipe parameters, then accept both
-   dialogs.
+5. Review the recipe parameters, then accept the dialog.
 
-Titles beginning with `Dark` are preassigned in the compact **Dark frames**
-checklist. Unchecked images are assigned to Flat, so every selected image has
-exactly one role before execution.
+The plugin assigns each selected image to the dark or flat frames from its metadata: an explicit frame role wins, otherwise images carrying an exposure time are flat frames. DataLab asks for an assignment only when the selection is ambiguous or fails the campaign checks. The **Applications** catalog offers the same path in one click: **Try with this example** under the relative-DN method opens the quickstart and runs the method.
 
 ## Expected Result
 

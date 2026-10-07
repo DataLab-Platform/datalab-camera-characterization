@@ -37,8 +37,21 @@ from ..core import (
 )
 
 EXPOSURE_TIME_METADATA_KEY = metadata_key("exposure_time_s")
+FRAME_ROLE_METADATA_KEY = metadata_key("frame_role")
 OUTPUT_ROLE_METADATA_KEY = metadata_key("output_role")
 CANDIDATE_THRESHOLD_METADATA_KEY = metadata_key("candidate_threshold_sigma")
+
+
+def infer_frame_role(image: ImageObj) -> str:
+    """Return ``"dark"`` or ``"flat"`` for one acquisition frame.
+
+    An explicit frame-role metadata value wins; otherwise frames carrying an
+    exposure time are flat frames, as in the original relative-DN convention.
+    """
+    role = image.metadata.get(FRAME_ROLE_METADATA_KEY)
+    if role in ("dark", "flat"):
+        return role
+    return "flat" if EXPOSURE_TIME_METADATA_KEY in image.metadata else "dark"
 
 
 class CameraRecipeParameters(gds.DataSet):
@@ -118,30 +131,32 @@ def _frame_arrays(
     return tuple(_image_data(image, slot_name) for image in images)
 
 
-def _flat_exposure(image: ImageObj) -> float:
+def _image_exposure(image: ImageObj, role: str = "Flat") -> float:
     """Return one finite non-negative exposure from namespaced metadata."""
     value = image.metadata.get(EXPOSURE_TIME_METADATA_KEY)
     if isinstance(value, bool) or not isinstance(value, Real):
         raise RecipeValidationError(
-            f"Flat image {image.title!r} requires numeric metadata "
+            f"{role} image {image.title!r} requires numeric metadata "
             f"{EXPOSURE_TIME_METADATA_KEY!r}"
         )
     exposure_time_s = float(value)
     if not math.isfinite(exposure_time_s) or exposure_time_s < 0.0:
         raise RecipeValidationError(
-            f"Flat image {image.title!r} has invalid metadata "
+            f"{role} image {image.title!r} has invalid metadata "
             f"{EXPOSURE_TIME_METADATA_KEY!r}"
         )
     return exposure_time_s
 
 
-def _group_flat_images(
+def _group_images_by_exposure(
     images: Sequence[ImageObj],
+    slot_name: str = "flat_frames",
+    role: str = "Flat",
 ) -> tuple[tuple[CameraExposureSeries, ...], tuple[tuple[ImageObj, ...], ...]]:
-    """Group flat frames by exposure and return increasing exposure series."""
+    """Group frames by exposure and return increasing exposure series."""
     grouped: dict[float, list[ImageObj]] = {}
     for image in images:
-        grouped.setdefault(_flat_exposure(image), []).append(image)
+        grouped.setdefault(_image_exposure(image, role), []).append(image)
 
     series: list[CameraExposureSeries] = []
     image_groups: list[tuple[ImageObj, ...]] = []
@@ -149,9 +164,9 @@ def _group_flat_images(
         group = tuple(grouped[exposure_time_s])
         series.append(
             CameraExposureSeries(
-                _frame_arrays(group, "flat_frames"),
+                _frame_arrays(group, slot_name),
                 exposure_time_s,
-                label=f"flat[{exposure_time_s:g} s]",
+                label=f"{role.casefold()}[{exposure_time_s:g} s]",
             )
         )
         image_groups.append(group)
@@ -337,7 +352,7 @@ def run_relative_dn_characterization(
     context.report_progress(0.0, "Preparing Camera frame series")
 
     dark_frames = _frame_arrays(dark_images, "dark_frames")
-    flat_series, flat_groups = _group_flat_images(flat_images)
+    flat_series, flat_groups = _group_images_by_exposure(flat_images)
     context.report_progress(0.25, "Validating Camera frame series")
     context.raise_if_cancelled()
 
@@ -491,6 +506,8 @@ __all__ = [
     "CameraRecipeParameters",
     "CANDIDATE_THRESHOLD_METADATA_KEY",
     "EXPOSURE_TIME_METADATA_KEY",
+    "FRAME_ROLE_METADATA_KEY",
     "OUTPUT_ROLE_METADATA_KEY",
+    "infer_frame_role",
     "run_relative_dn_characterization",
 ]

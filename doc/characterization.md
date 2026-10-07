@@ -9,6 +9,8 @@ This implementation is not a calibrated radiometric model and does not claim
 EMVA 1288 compliance. It does not estimate conversion gain, quantum efficiency,
 responsivity, or photon flux.
 
+The conversion gain and electron quantities are estimated by the separate photon transfer recipe, described in [`photon-transfer.md`](photon-transfer.md). Dark current is measured by the dark-ramp recipe, described in [`dark-current.md`](dark-current.md).
+
 ## Input Contract
 
 Each series may be a stack shaped `(frames, height, width)` or a sequence of 2D

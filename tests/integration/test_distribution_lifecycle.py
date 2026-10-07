@@ -21,11 +21,11 @@ from datalab.tests import datalab_test_app_context
 from datalab_camera_characterization import PLUGIN_ID, PLUGIN_NAME
 from datalab_camera_characterization.adapters.desktop import (
     CameraDetectorCharacterizationPlugin,
-    CameraInputRoleParameters,
 )
 from datalab_camera_characterization.workflow import (
     RELATIVE_DN_RECIPE,
     CameraRecipeParameters,
+    suggest_dark_flat_bindings,
 )
 
 PROJECT_ROOT = Path(__file__).parents[2]
@@ -99,7 +99,7 @@ print(json.dumps({
     "icons": sorted(icon.name for icon in icons.iterdir()),
     "module_file": module.__file__,
     "plugin_id": plugin_class.get_plugin_id(),
-    "recipe_id": example.recipe_id,
+    "recipe_ids": list(example.recipe_ids),
     "resource_size": len(payload),
     "resource_sha256": hashlib.sha256(payload).hexdigest().upper(),
 }))
@@ -120,12 +120,12 @@ print(json.dumps({
 
     assert result == {
         "entry_point": "datalab_camera_characterization",
-        "icons": ["camera_characterization.svg"],
+        "icons": ["camera_characterization.svg", "camera_demo.svg"],
         "module_file": os.fspath(
             install_dir / "datalab_camera_characterization" / "adapters" / "desktop.py"
         ),
         "plugin_id": PLUGIN_ID,
-        "recipe_id": RELATIVE_DN_RECIPE.recipe_id,
+        "recipe_ids": [RELATIVE_DN_RECIPE.recipe_id],
         "resource_size": 624_248,
         "resource_sha256": QUICKSTART_SHA256,
     }
@@ -177,7 +177,7 @@ def test_camera_outputs_survive_native_h5_round_trip(tmp_path) -> None:
         plugin.main = window
         plugin.open_quickstart()
         images = window.imagepanel.objmodel.get_all_objects()
-        inputs = CameraInputRoleParameters.create(images).to_recipe_inputs()
+        inputs = suggest_dark_flat_bindings(images)
         outcome = RecipeRunner(window).run(
             RELATIVE_DN_RECIPE,
             inputs,

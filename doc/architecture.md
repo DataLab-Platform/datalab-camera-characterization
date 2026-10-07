@@ -18,7 +18,9 @@ pure-NumPy camera simulator, structured dataset validation, batch reference
 tests, bounded-memory characterization in DN, a registered headless recipe, and
 explicit Desktop/Web integration boundaries. The recipe returns a response
 curve anchor, useful mean images, an anchored metric table, and structured
-warnings. Web remains explicitly unsupported.
+warnings.
+
+Two further recipes reuse the same aggregation and validation code: `core/photon_transfer.py` with `workflow/photon_transfer.py` estimate the conversion gain from the photon transfer curve, and `core/dark_current.py` with `workflow/dark_current.py` fit a dark-frame exposure ramp. `workflow/recipes.py` registers the three descriptors in `CAMERA_RECIPES`. The host-neutral `demo.py` module generates the photon transfer and dark-ramp examples in memory for both adapters; the relative-DN quickstart stays a packaged HDF5 file.
 
 Mean and variance are owned by `core/aggregation.py`. Validation,
 characterization, and workflows call that module rather than implementing
@@ -35,13 +37,7 @@ objects. It never mutates a workspace. The DataLab recipe runner owns input
 slot validation, transactional cross-panel commit, scalar-result attachment,
 and `RecipeRunRecord` provenance.
 
-`adapters/desktop.py` owns the modal `CameraRecipeParameters` editor and uses
-the registered DataLab main window as its parent. It does not duplicate the
-parameter schema, scientific calculation, or commit logic. A run action is
-enabled when the current image selection can satisfy the default campaign
-minima. A transient DataSet assigns exactly one dark or flat role to every
-selected image, then the adapter delegates validation, execution, provenance,
-and cross-panel commit to `RecipeRunner`.
+`adapters/desktop.py` declares the Desktop actions and examples. It does not duplicate the parameter schema, input assignment, scientific calculation, or commit logic: the run actions call DataLab's generic recipe launcher, which uses the binding suggesters and input checks of `workflow/input_checks.py`, edits the declared parameters, and delegates validation, execution, provenance, and cross-panel commit to `RecipeRunner`.
 
 The packaged quickstart is a native DataLab HDF5 resource declared by the
 Desktop adapter through `PluginExample`. Its deterministic generation script
