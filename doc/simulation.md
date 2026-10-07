@@ -49,11 +49,24 @@ pixels. That count may be zero for a sufficiently small image or fraction. The
 selected pixels are divided as evenly as possible into dead and hot masks; an
 odd remainder becomes one additional hot pixel.
 
+## Dark-Current Structure and Noise Streams
+
+Dark-current structure is opt-in. Its default values keep every existing campaign bitwise identical:
+
+- `dark_current_nonuniformity_fraction` multiplies the dark-current rate by a unit-mean lognormal map with that relative standard deviation;
+- `dark_hot_pixel_fraction` selects pixels whose rate is multiplied by `dark_hot_pixel_factor`; they are distinct from the defective hot pixels stuck at saturation;
+- `amplifier_glow_e_per_s` adds a glow in electrons per second, with the same lower-right geometry as `amplifier_glow_dn`; unlike the fixed DN glow, it grows with the exposure time.
+
+The per-pixel rate, glow included, is returned as `dark_current_map_e_per_s`, and the hot pixels as `dark_hot_pixel_mask`.
+
+`noise_stream` selects an independent temporal-noise stream while keeping all static maps. Series simulated with the same seed and different streams therefore observe the same sensor with independent noise, as in a real acquisition campaign. Stream 0 is the original stream.
+
 ## Reproducibility
 
 `numpy.random.SeedSequence` derives independent generators for PRNU, pixel
 DSNU, defective-pixel selection, frame noise, row/column patterns, and
-illumination structure. For a fixed shape and seed, static maps remain
+illumination structure. A seventh child, appended after them, draws the
+dark-current structure, so existing seeds keep their maps. For a fixed shape and seed, static maps remain
 unchanged when the frame count, exposure, or signal level changes. The returned
 arrays are read-only so that a result retains its original truth. Bitwise
 reproducibility is asserted for repeated runs using the same supported NumPy

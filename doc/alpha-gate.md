@@ -58,8 +58,8 @@ pass/fail threshold.
 ## Desktop UX
 
 Automated Desktop tests exercise the forms and the complete visible quickstart
-path: open and select the packaged campaign, assign every image explicitly to
-dark or flat, edit parameters, run the registered recipe, and obtain one
+path: open and select the packaged campaign, let the plugin assign every image
+to dark or flat from its metadata, edit parameters, run the registered recipe, and obtain one
 response curve, two mean images, three spatial maps, four profiles or
 distributions, and the anchored metrics table. Cancellation, invalid campaigns,
 transactional commit, installed-wheel discovery, hot reload, and native HDF5

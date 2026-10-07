@@ -1,9 +1,16 @@
 # Camera & Detector Characterization
 
-Headless workflows and DataLab adapters for relative characterization of
-scientific cameras and detectors.
+Headless workflows and DataLab adapters for the characterization of scientific cameras and detectors.
 
-This repository currently provides a deterministic synthetic camera model,
+The plugin offers three methods, each with its own demonstration campaign:
+
+| Recipe | Physical question | Demonstration |
+| --- | --- | --- |
+| Relative Camera characterization | How do response, temporal noise and spatial non-uniformity behave, in DN? | Packaged quickstart: 4 dark frames and 4 flat levels with vignetting and dust |
+| Photon transfer curve | What are the conversion gain (e⁻/DN), read noise, saturation capacity and dynamic range? | Generated ladder of 16 uniform-illumination levels up to ADC saturation |
+| Dark current and hot pixels | How much dark current does each pixel generate, and which pixels are hot? | Generated uncooled-sensor dark ramp from 0.5 s to 8 s with amplifier glow |
+
+This repository provides a deterministic synthetic camera model,
 structured input diagnostics, relative temporal and spatial characterization
 in DN, and a headless DataLab recipe producing curves, maps, profiles,
 distributions, candidate pixels, and an anchored metric table. It does not
@@ -106,14 +113,20 @@ The recipe returns:
 See [`doc/workflow.md`](doc/workflow.md) for the input, parameter, diagnostic,
 output, and provenance contracts.
 
+## Photon Transfer and Dark Current
+
+The `photon-transfer` recipe fits the dark-corrected temporal variance against the dark-corrected mean signal. Its slope is the inverse conversion gain, from which the read noise, saturation capacity, dynamic range and SNR curve follow in electrons. See [`doc/photon-transfer.md`](doc/photon-transfer.md).
+
+The `dark-current` recipe fits every pixel's dark signal against exposure time. It returns dark-current and offset maps, hot pixels detected against the local background, the dark-current non-uniformity and an indicative gain from dark shot noise. See [`doc/dark-current.md`](doc/dark-current.md).
+
+Both demonstrations are generated in memory from the simulator and tag every frame with `FRAME_ROLE_METADATA_KEY` (`dark` or `flat`). This explicit role wins over the exposure-time convention, so dark-ramp frames carrying an exposure time stay dark frames.
+
 ## Desktop Quickstart
 
 After installing the plugin, choose **Plugins > Camera & Detector
 Characterization > Open quickstart example**. DataLab loads and selects a
 packaged synthetic campaign containing four dark frames and four flat exposure
-levels. Then choose **Run camera characterization...** and accept the explicit
-role and parameter forms to obtain the response curve, spatial maps, profiles,
-distributions, and anchored metrics table without writing Python.
+levels. Then choose **Run camera characterization...**. The plugin assigns the dark and flat frames from their metadata, checks the campaign, and DataLab opens the recipe parameters. Accept them to obtain the response curve, spatial maps, profiles, distributions, and anchored metrics table without writing Python.
 
 The 96 x 128 dark frames represent shutter-closed sensor readout: bias,
 fixed-pattern banding, amplifier glow, read noise, and defective pixels. The
@@ -125,7 +138,9 @@ Opening the example asks before replacing a non-empty workspace. The complete
 walkthrough and expected results are documented in
 [`doc/quickstart.md`](doc/quickstart.md).
 
-The DataLab welcome page also shows a **Camera & Detector Characterization** tile in its Applications section. The tile is derived from the plugin information and icon, and opens the Camera page of the **Applications** catalog.
+The DataLab welcome page also shows a **Camera & Detector Characterization** tile in its Applications section. The tile is derived from the plugin information and icon, and opens the Camera page of the **Applications** catalog. A second **Open quickstart example** tile opens and selects the quickstart; when the section is short of room, it moves to the menu of the main tile.
+
+The same plugin menu offers **Open photon transfer example** and **Open dark-ramp example**, then **Run photon transfer analysis...** and **Run dark-current analysis...**. The **Applications** catalog presents each method with the inputs it expects, a live status telling whether the current selection can run it, and the examples designed for it. **Try with this example** opens such an example, prefills the method parameters, and runs the method once they are accepted. The photon transfer ladder serves both the photon transfer and the relative-DN methods; the dark ramp serves the dark-current method.
 
 ## DataLab Web Integration
 
@@ -137,9 +152,9 @@ recipe versions through `get_web_manifest()`.
 
 The packaged `camera_quickstart.h5` is read with `importlib.resources` and
 passed to DataLab-Web's existing byte-based HDF5 workspace loader. Images
-imported through the browser use the same metadata contract as Desktop: images
+imported through the browser use the same metadata contract as Desktop: an explicit frame role wins; otherwise images
 with `EXPOSURE_TIME_METADATA_KEY` are flat frames and the others are dark
-frames. Recipe execution delegates to the shared headless workflow.
+frames. Recipe execution delegates to the shared headless workflow. The manifest lists every recipe and example.
 
 A real Chromium/Pyodide qualification now executes the shared recipe and
 checks a visible response curve, PRNU-like map, and anchored metrics table. It
@@ -196,9 +211,4 @@ for the manifest contract, scientific content requirements, and automation
 boundary.
 
 Installing the project registers `org.datalab.camera-characterization` through the
-`datalab.plugins` entry-point group. The Desktop adapter exposes the headless
-recipe through the plugin SDK and provides a modal editor for its declared
-`CameraRecipeParameters`. With at least six images selected, **Run camera
-characterization...** assigns each image a dark or flat role, opens the recipe
-parameters, and delegates the cross-panel commit to DataLab's transactional
-`RecipeRunner`.
+`datalab.plugins` entry-point group. The Desktop adapter exposes the headless recipes through the plugin SDK. Each recipe declares its input slots (count, required `exposure_time` metadata, frame-role hint), proposes the dark and flat frames from their metadata, and checks the campaign (frame shapes, dark count, exposure levels, frames per level) before the run. The run actions delegate to DataLab's generic recipe launcher: it asks for an assignment only when the selection is ambiguous or invalid, opens the recipe parameters, and delegates the cross-panel commit to the transactional `RecipeRunner`.

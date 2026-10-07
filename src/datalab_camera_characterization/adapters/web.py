@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from importlib import resources
 
-from datalab.plugin_examples import PluginExample
+from datalab.plugin_examples import PluginExample, PluginExampleData
 from datalab.plugins import PluginBase, PluginCapability, PluginInfo
 from datalab.recipes import (
     RecipeExecutionContext,
@@ -16,10 +16,12 @@ from datalab.recipes import (
 from sigima.objects import ImageObj
 
 from .. import PLUGIN_DESCRIPTION, PLUGIN_ID, PLUGIN_NAME, __version__
+from ..demo import DARK_RAMP_DEMO, PHOTON_TRANSFER_DEMO, materialize_generated_example
 from ..workflow import (
-    EXPOSURE_TIME_METADATA_KEY,
+    CAMERA_RECIPES,
     RELATIVE_DN_RECIPE,
     CameraRecipeParameters,
+    infer_frame_role,
 )
 
 WEB_STATUS = "verified"
@@ -32,7 +34,7 @@ CAMERA_QUICKSTART = PluginExample(
     title="Synthetic camera characterization",
     resource=("datalab_camera_characterization:examples/camera_quickstart.h5"),
     description="Physically structured dark and flat frames for relative-DN analysis.",
-    recipe_id=RELATIVE_DN_RECIPE.recipe_id,
+    recipe_ids=(RELATIVE_DN_RECIPE.recipe_id,),
 )
 
 
@@ -52,37 +54,20 @@ class CameraDetectorCharacterizationWebPlugin(PluginBase):
             "https://github.com/DataLab-Platform/datalab-camera-characterization"
         ),
     )
-    RECIPES = (RELATIVE_DN_RECIPE,)
-    EXAMPLES = (CAMERA_QUICKSTART,)
+    RECIPES = CAMERA_RECIPES
+    EXAMPLES = (CAMERA_QUICKSTART, PHOTON_TRANSFER_DEMO, DARK_RAMP_DEMO)
 
     def create_actions(self) -> None:
         """Application actions are provided by DataLab-Web's generic host."""
 
     @classmethod
-    def suggest_recipe_bindings(
-        cls,
-        recipe,
-        candidates: Sequence[ImageObj],
-    ) -> Mapping[str, Sequence[ImageObj]]:
-        """Suggest dark/flat roles from stable exposure-time metadata."""
-        if recipe != RELATIVE_DN_RECIPE:
-            return {}
-        images = tuple(candidates)
-        return {
-            "dark_frames": tuple(
-                image
-                for image in images
-                if EXPOSURE_TIME_METADATA_KEY not in image.metadata
-            ),
-            "flat_frames": tuple(
-                image
-                for image in images
-                if EXPOSURE_TIME_METADATA_KEY in image.metadata
-            ),
-        }
+    def materialize_example(cls, example_id: str) -> PluginExampleData | None:
+        """Generate in-memory examples; the quickstart stays a packaged file."""
+        cls.get_example(example_id)
+        return materialize_generated_example(example_id)
 
 
-def get_web_manifest() -> dict[str, str]:
+def get_web_manifest() -> dict[str, object]:
     """Return the explicit browser bundle and compatibility contract."""
     return {
         "plugin_id": PLUGIN_ID,
@@ -90,8 +75,14 @@ def get_web_manifest() -> dict[str, str]:
         "web_status": WEB_STATUS,
         "datalab_web_version": DATALAB_WEB_VERSION,
         "pyodide_version": PYODIDE_VERSION,
-        "recipe_id": RELATIVE_DN_RECIPE.recipe_id,
-        "recipe_version": RELATIVE_DN_RECIPE.version,
+        "recipes": [
+            {"recipe_id": recipe.recipe_id, "recipe_version": recipe.version}
+            for recipe in CAMERA_RECIPES
+        ],
+        "examples": [
+            example.id
+            for example in CameraDetectorCharacterizationWebPlugin.get_examples()
+        ],
         "quickstart_filename": QUICKSTART_FILENAME,
     }
 
@@ -109,20 +100,18 @@ def read_quickstart_bytes() -> bytes:
 def build_recipe_inputs(images: Sequence[ImageObj]) -> RecipeInputs:
     """Map browser-imported images to Camera roles using stable metadata.
 
-    Flat frames carry :data:`EXPOSURE_TIME_METADATA_KEY`; images without that
-    key are dark frames. The browser UI remains responsible for passing only
-    the images selected for one campaign.
+    An explicit frame-role metadata value wins; otherwise flat frames carry an
+    exposure time and images without one are dark frames. The browser UI
+    remains responsible for passing only the images selected for one campaign.
     """
     image_values = tuple(images)
     if any(not isinstance(image, ImageObj) for image in image_values):
         raise RecipeValidationError("Camera Web inputs must be image objects")
     dark_frames = tuple(
-        image
-        for image in image_values
-        if EXPOSURE_TIME_METADATA_KEY not in image.metadata
+        image for image in image_values if infer_frame_role(image) == "dark"
     )
     flat_frames = tuple(
-        image for image in image_values if EXPOSURE_TIME_METADATA_KEY in image.metadata
+        image for image in image_values if infer_frame_role(image) == "flat"
     )
     if not dark_frames:
         raise RecipeValidationError("Camera Web inputs require dark frames")

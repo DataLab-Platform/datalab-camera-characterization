@@ -48,3 +48,12 @@ All notable changes to this project will be documented in this file.
   readout banding, amplifier glow, and defects, and flat frames with a uniform
   illuminated field, vignetting, dust shadows, PRNU, and shot noise.
 - Add a dedicated plugin icon, shown on the Camera tile of the DataLab welcome page.
+- Add a photon transfer recipe estimating conversion gain, read noise, saturation capacity, dynamic range and SNR, with a generated 16-level demonstration validated against simulator truth.
+- Add a dark-current recipe fitting a dark-frame exposure ramp per pixel to map dark current, offset and isolated hot pixels, with a generated uncooled-sensor demonstration validated against simulator truth.
+- Add opt-in simulator dark-current non-uniformity, dark hot pixels, exposure-proportional amplifier glow and independent noise streams, keeping existing campaigns bitwise identical.
+- Let an explicit frame-role metadata value decide dark or flat roles before the exposure-time convention.
+- Add a quickstart tile next to the Camera tile on the DataLab welcome page.
+- Declare what each recipe expects (slot titles and descriptions, minimum frame counts, required exposure time) and check campaigns before the run, so DataLab can tell whether the current selection is usable and why.
+- Propose dark and flat frames from their metadata and let DataLab's generic launcher run the recipes, replacing the Desktop dark/flat checklist.
+- Pair the photon transfer ladder with both the photon transfer and relative-DN methods; example parameter values are now keyed by method.
+- Document how to set the exposure time and the frame role on your own frames with DataLab's Add metadata dialog (`doc/preparing-frames.md`).

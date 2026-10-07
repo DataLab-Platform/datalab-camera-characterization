@@ -2,12 +2,16 @@
 
 The Camera Web adapter is tested against one explicit browser matrix:
 
-| Component          | Version |
-| ------------------ | ------- |
-| DataLab-Web        | 0.9.0   |
-| Pyodide            | 0.26.4  |
-| Camera plugin      | 0.1.0   |
-| Relative-DN recipe | 1.1.0   |
+| Component              | Version |
+| ---------------------- | ------- |
+| DataLab-Web            | 0.9.0   |
+| Pyodide                | 0.26.4  |
+| Camera plugin          | 0.2.0   |
+| Relative-DN recipe     | 1.1.0   |
+| Photon transfer recipe | 1.0.0   |
+| Dark-current recipe    | 1.0.0   |
+
+The photon transfer and dark-current recipes are qualified by DataLab-Web's `tests/e2e/application_methods.spec.ts`: each generated example is opened through its deep link, its recipe is started from the Applications dialog, and the created outputs must appear in the visible object tree without page errors. DataLab-Web's Python contracts run the same pairs through the generic host and require unambiguous slot bindings. The detailed visible and memory gates below apply to the relative-DN recipe.
 
 ## Visible workflow gate
 
