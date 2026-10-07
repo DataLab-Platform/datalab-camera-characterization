@@ -57,3 +57,4 @@ All notable changes to this project will be documented in this file.
 - Propose dark and flat frames from their metadata and let DataLab's generic launcher run the recipes, replacing the Desktop dark/flat checklist.
 - Pair the photon transfer ladder with both the photon transfer and relative-DN methods; example parameter values are now keyed by method.
 - Document how to set the exposure time and the frame role on your own frames with DataLab's Add metadata dialog (`doc/preparing-frames.md`).
+- Add a scientific camera simulator tool, in DataLab Desktop and DataLab-Web: a live view next to the sensor, illumination and acquisition settings, and acquisitions of dark and flat frames tagged for the Camera methods, in single-exposure or exposure-sequence mode (`doc/camera-simulator.md`).

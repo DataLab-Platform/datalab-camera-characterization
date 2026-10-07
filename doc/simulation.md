@@ -5,6 +5,8 @@ static/noiseless ground truth used to generate them. It is intended for testing
 future relative characterization algorithms, not for claiming a calibrated or
 EMVA 1288-compliant camera model.
 
+In DataLab, the scientific camera simulator tool drives this model interactively, with a live view and acquisitions tagged for the Camera methods. See [`camera-simulator.md`](camera-simulator.md).
+
 ## Units and Model
 
 The conversion gain is expressed in electrons per digital number (`e-/DN`).

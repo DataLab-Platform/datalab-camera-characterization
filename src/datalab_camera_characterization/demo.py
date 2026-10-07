@@ -94,7 +94,7 @@ def _sensor_parameters(seed: int, **overrides: object) -> CameraSimulationParame
     return CameraSimulationParameters(**values)
 
 
-def _series_images(
+def series_images(
     title_prefix: str,
     parameters: CameraSimulationParameters,
     role: str,
@@ -116,7 +116,7 @@ def build_photon_transfer_campaign() -> PluginExampleData:
     """Build the deterministic photon transfer demonstration campaign."""
     stream = 1
     longest = max(PHOTON_TRANSFER_EXPOSURES_S)
-    images = _series_images(
+    images = series_images(
         "Dark",
         _sensor_parameters(
             PHOTON_TRANSFER_SEED,
@@ -130,7 +130,7 @@ def build_photon_transfer_campaign() -> PluginExampleData:
     for exposure_time_s in PHOTON_TRANSFER_EXPOSURES_S:
         stream += 1
         images.extend(
-            _series_images(
+            series_images(
                 f"Flat {exposure_time_s * 1_000:g} ms",
                 _sensor_parameters(
                     PHOTON_TRANSFER_SEED,
@@ -150,7 +150,7 @@ def build_dark_ramp_campaign() -> PluginExampleData:
     images: list[ImageObj] = []
     for stream, exposure_time_s in enumerate(DARK_RAMP_EXPOSURES_S, start=1):
         images.extend(
-            _series_images(
+            series_images(
                 f"Dark {exposure_time_s:g} s",
                 _sensor_parameters(
                     DARK_RAMP_SEED,
@@ -198,4 +198,5 @@ __all__ = [
     "build_dark_ramp_campaign",
     "build_photon_transfer_campaign",
     "materialize_generated_example",
+    "series_images",
 ]

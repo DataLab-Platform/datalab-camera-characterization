@@ -57,6 +57,8 @@ truth = result.truth
 The same parameters and seed produce identical frames and truth maps. See
 [`doc/simulation.md`](doc/simulation.md) for units, equations, and limitations.
 
+In DataLab Desktop and DataLab-Web, the **Scientific camera simulator** tool shows a live view of this model next to its settings, and acquires dark and flat frames tagged for the Camera methods. See [`doc/camera-simulator.md`](doc/camera-simulator.md).
+
 ## Relative Characterization in DN
 
 The headless core validates dark and uniform-illumination frame stacks before
