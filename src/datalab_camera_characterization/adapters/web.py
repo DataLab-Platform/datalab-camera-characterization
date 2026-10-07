@@ -17,6 +17,7 @@ from sigima.objects import ImageObj
 
 from .. import PLUGIN_DESCRIPTION, PLUGIN_ID, PLUGIN_NAME, __version__
 from ..demo import DARK_RAMP_DEMO, PHOTON_TRANSFER_DEMO, materialize_generated_example
+from ..simulator import CAMERA_SIMULATOR_TOOL, CameraSimulator
 from ..workflow import (
     CAMERA_RECIPES,
     RELATIVE_DN_RECIPE,
@@ -56,9 +57,14 @@ class CameraDetectorCharacterizationWebPlugin(PluginBase):
     )
     RECIPES = CAMERA_RECIPES
     EXAMPLES = (CAMERA_QUICKSTART, PHOTON_TRANSFER_DEMO, DARK_RAMP_DEMO)
+    TOOLS = (CAMERA_SIMULATOR_TOOL,)
 
     def create_actions(self) -> None:
         """Application actions are provided by DataLab-Web's generic host."""
+
+    def camera_simulator(self) -> CameraSimulator:
+        """Return a new scientific camera simulator."""
+        return CameraSimulator()
 
     @classmethod
     def materialize_example(cls, example_id: str) -> PluginExampleData | None:

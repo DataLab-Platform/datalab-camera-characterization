@@ -20,6 +20,7 @@ from .. import (
     __version__,
 )
 from ..demo import DARK_RAMP_DEMO, PHOTON_TRANSFER_DEMO, materialize_generated_example
+from ..simulator import CAMERA_SIMULATOR_TOOL, CameraSimulator
 from ..workflow import (
     CAMERA_RECIPES,
     DARK_CURRENT_RECIPE,
@@ -64,6 +65,7 @@ class CameraDetectorCharacterizationPlugin(PluginBase):
     )
     RECIPES = CAMERA_RECIPES
     EXAMPLES = (CAMERA_QUICKSTART, PHOTON_TRANSFER_DEMO, DARK_RAMP_DEMO)
+    TOOLS = (CAMERA_SIMULATOR_TOOL,)
     WELCOME_TILES = (
         WelcomeTile(
             id="application",
@@ -85,6 +87,10 @@ class CameraDetectorCharacterizationPlugin(PluginBase):
         """Generate in-memory examples; the quickstart stays a packaged file."""
         cls.get_example(example_id)
         return materialize_generated_example(example_id)
+
+    def camera_simulator(self) -> CameraSimulator:
+        """Return a new scientific camera simulator."""
+        return CameraSimulator()
 
     def run_relative_dn(self) -> RecipeOutcome | None:
         """Run the relative-DN characterization on the selected frames."""
