@@ -37,7 +37,7 @@ This estimate needs enough dark electrons to dominate the read noise; it is repo
 
 ## Inputs and Parameters
 
-The recipe has one `dark_frames` slot. Every frame carries its exposure time. The generated demonstration also writes `FRAME_ROLE_METADATA_KEY = "dark"` so that its frames are not taken as flat frames by the other recipes, although they carry an exposure time.
+The recipe has one `dark_frames` slot. Every frame carries its exposure time. The generated demonstration also writes `FRAME_ROLE_METADATA_KEY = "dark"` so that its frames are not taken as flat frames by the other recipes, although they carry an exposure time. To set these keys on your own frames, see [`preparing-frames.md`](preparing-frames.md).
 
 `DarkCurrentRecipeParameters` exposes the minimum frame count, the minimum number of exposure levels, the saturation level and warning fraction, the conversion gain (0 keeps DN units), the hot-pixel threshold, the background window, the histogram bin count and the aggregation block size.
 

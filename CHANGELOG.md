@@ -56,3 +56,4 @@ All notable changes to this project will be documented in this file.
 - Declare what each recipe expects (slot titles and descriptions, minimum frame counts, required exposure time) and check campaigns before the run, so DataLab can tell whether the current selection is usable and why.
 - Propose dark and flat frames from their metadata and let DataLab's generic launcher run the recipes, replacing the Desktop dark/flat checklist.
 - Pair the photon transfer ladder with both the photon transfer and relative-DN methods; example parameter values are now keyed by method.
+- Document how to set the exposure time and the frame role on your own frames with DataLab's Add metadata dialog (`doc/preparing-frames.md`).

@@ -31,6 +31,8 @@ values form one exposure series; series are sorted by increasing exposure.
 The core then validates shape, dtype, finitude, frame counts, exposure order,
 saturation, and the number of usable levels before calculating outputs.
 
+To set this key, and the optional frame role, on your own frames, see [`preparing-frames.md`](preparing-frames.md).
+
 ## Parameters
 
 `CameraRecipeParameters` exposes minimum frame and flat-level counts,
