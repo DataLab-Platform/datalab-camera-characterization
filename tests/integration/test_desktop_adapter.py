@@ -9,11 +9,11 @@ import pytest
 from datalab.adapters_metadata import TableAdapter
 from datalab.env import execenv
 from datalab.gui.actionhandler import ActionCategory
-from datalab.gui.recipe_inputs import RecipeInputDialog
-from datalab.gui.recipe_runner import RecipeRunner
+from datalab.gui.plugins.recipe_inputs import RecipeInputDialog
+from datalab.gui.plugins.recipe_runner import RecipeRunner
 from datalab.plugins import PluginCapability
-from datalab.recipe_binding import RecipeInputIssueCode, RecipeReadinessStatus
-from datalab.recipes import (
+from datalab.plugins.recipe_binding import RecipeInputIssueCode, RecipeReadinessStatus
+from datalab.plugins.recipes import (
     RECIPE_RUN_RECORD_OPTION,
     RecipeRunRecord,
 )

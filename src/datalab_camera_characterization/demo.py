@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping
 
-from datalab.plugin_examples import PluginExample, PluginExampleData
+from datalab.plugins.examples import PluginExample, PluginExampleData
 from sigima.objects import ImageObj, create_image
 
 from .core import CameraSimulationParameters, metadata_key, simulate_camera_frames

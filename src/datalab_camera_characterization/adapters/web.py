@@ -5,9 +5,9 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from importlib import resources
 
-from datalab.plugin_examples import PluginExample, PluginExampleData
 from datalab.plugins import PluginBase, PluginCapability, PluginInfo
-from datalab.recipes import (
+from datalab.plugins.examples import PluginExample, PluginExampleData
+from datalab.plugins.recipes import (
     RecipeExecutionContext,
     RecipeInputs,
     RecipeOutcome,
