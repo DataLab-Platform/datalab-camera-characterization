@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
-from datalab.recipes import RecipeExecutionContext, RecipeValidationError
+from datalab.plugins.recipes import RecipeExecutionContext, RecipeValidationError
 from sigima.objects import ImageObj, SignalObj, TableResult, create_image
 
 import datalab_camera_characterization.core.aggregation as aggregation

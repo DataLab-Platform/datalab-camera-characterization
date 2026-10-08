@@ -10,7 +10,7 @@ from collections.abc import Sequence
 
 import guidata.dataset as gds
 import numpy as np
-from datalab.recipes import RecipeDiagnostic, RecipeInputs
+from datalab.plugins.recipes import RecipeDiagnostic, RecipeInputs
 from sigima.objects import ImageObj
 
 from .dark_current import DarkCurrentRecipeParameters
