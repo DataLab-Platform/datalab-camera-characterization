@@ -1,4 +1,4 @@
-# Camera & Detector Characterization
+# <img src="src/datalab_camera_characterization/icons/camera_characterization.svg" alt="" width="48" align="absmiddle"> Camera & Detector Characterization
 
 A [DataLab](https://datalab-platform.com/) plugin to characterize scientific cameras and detectors: response, noise, conversion gain, dark current and defective pixels.
 
