@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Python 3.10 or later is required.
+
 First version of the Camera & Detector Characterization plugin.
 
 Methods:
