@@ -48,7 +48,7 @@ def _no_assignment_dialog(_dialog: RecipeInputDialog) -> bool:
 def test_plugin_descriptor() -> None:
     """The entry point exposes stable SDK metadata and its headless recipes."""
     assert CameraDetectorCharacterizationPlugin.get_plugin_id() == PLUGIN_ID
-    assert CameraDetectorCharacterizationPlugin.PLUGIN_INFO.version == "0.2.0"
+    assert CameraDetectorCharacterizationPlugin.PLUGIN_INFO.version == "0.2.1"
     assert CameraDetectorCharacterizationPlugin.PLUGIN_INFO.capabilities == frozenset(
         {
             PluginCapability.APPLICATION,
@@ -87,7 +87,7 @@ def test_plugin_descriptor() -> None:
         (FRAME_ROLE_METADATA_KEY, False),
     ]
     assert RELATIVE_DN_RECIPE.plugin_id == PLUGIN_ID
-    assert RELATIVE_DN_RECIPE.plugin_version == "0.2.0"
+    assert RELATIVE_DN_RECIPE.plugin_version == "0.2.1"
     assert RELATIVE_DN_RECIPE.version == "1.1.0"
     assert RELATIVE_DN_RECIPE.parameter_class is CameraRecipeParameters
     assert PHOTON_TRANSFER_RECIPE.version == "1.0.0"

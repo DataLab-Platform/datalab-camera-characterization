@@ -114,7 +114,7 @@ The checker verifies the fields, versions, paths, hashes and declared statuses. 
 
 ## DataLab-Web
 
-The Web adapter reports `verified` only for this matrix:
+Version 0.2.0 was verified for this historical matrix:
 
 | Component | Version |
 | --- | --- |
@@ -124,10 +124,12 @@ The Web adapter reports `verified` only for this matrix:
 | Relative-DN recipe | 1.1.0 |
 | Photon transfer and dark-current recipes | 1.0.0 |
 
+The 0.2.1 candidate was prequalified with the DataLab-Web 0.11.0 candidate and Pyodide 0.26.4 in Chromium, so its Web manifest reports `verified` for that combination. The final gate must be repeated with the exact official release wheel before DataLab-Web is released.
+
 DataLab-Web's `tests/e2e/application_methods.spec.ts` opens each example through its deep link, runs its method from the **Applications** dialog and checks the outputs in the object tree. For the relative-DN quickstart, a Playwright gate also requires:
 
 - a visible **Camera response** curve, a non-blank **Relative PRNU-like map** and the metrics table;
 - the removal of every object of a partial commit after an injected failure;
 - an incremental WASM heap of at most 64 MiB, and retained output arrays of at most three times the input arrays.
 
-The reference run on 2026-08-11 grew the WASM heap by 0.00 MiB and retained 0.39 MiB of output arrays, 0.84 times the input.
+The candidate prequalification used 491,520 bytes of input arrays, retained 411,200 bytes of output arrays (0.84 times the input), and grew the WASM heap by 0 bytes. The browser test injected a failure on the second output and verified that both panel trees and the retained array size were restored.

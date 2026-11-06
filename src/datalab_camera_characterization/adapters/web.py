@@ -26,7 +26,7 @@ from ..workflow import (
 )
 
 WEB_STATUS = "verified"
-DATALAB_WEB_VERSION = "0.9.0"
+DATALAB_WEB_VERSION = "0.11.0"
 PYODIDE_VERSION = "0.26.4"
 QUICKSTART_FILENAME = "camera_quickstart.h5"
 

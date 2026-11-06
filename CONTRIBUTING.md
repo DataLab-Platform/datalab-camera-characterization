@@ -2,7 +2,7 @@
 
 ## Setup and Checks
 
-Install the project in editable mode, in a Python environment where DataLab 1.3 or later is available:
+Install the project in editable mode, in a Python environment where DataLab 1.4 or later is available:
 
 ```bash
 python -m pip install -e ".[test]"
@@ -14,6 +14,8 @@ Before submitting a change, run:
 python -m ruff check .
 python -m pytest
 ```
+
+CI runs the published DataLab 1.4.0, Sigima 1.4.0 and SigimaX 1.1.0 stack on Linux and Windows, including the Alpha memory gate on Linux. A manual run can select a development branch with `stack-ref`; release tags run the checks before attaching the wheel.
 
 ## Trying the Plugin in DataLab
 

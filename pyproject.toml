@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "datalab-camera-characterization"
-version = "0.2.0"
+version = "0.2.1"
 description = "Characterization of scientific cameras and detectors"
 readme = "README.md"
 license = "BSD-3-Clause"
 license-files = ["LICENSE"]
 requires-python = ">=3.10"
-dependencies = ["datalab-platform >= 1.3, < 2", "numpy >= 1.22", "scipy >= 1.10.1"]
+dependencies = ["datalab-platform >= 1.4, < 2", "numpy >= 1.22", "scipy >= 1.10.1"]
 keywords = ["datalab", "datalab-plugin", "camera", "detector", "photon transfer"]
 
 [project.urls]
