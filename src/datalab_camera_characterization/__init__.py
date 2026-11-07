@@ -3,7 +3,7 @@
 PLUGIN_DESCRIPTION = "Characterization of scientific cameras and detectors"
 PLUGIN_ID = "org.datalab.camera-characterization"
 PLUGIN_NAME = "Camera & Detector Characterization"
-__version__ = "0.2.1"
+__version__ = "0.2.2rc1"
 
 __all__ = [
     "PLUGIN_DESCRIPTION",

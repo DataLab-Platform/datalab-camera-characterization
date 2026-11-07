@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "datalab-camera-characterization"
-version = "0.2.1"
+version = "0.2.2rc1"
 description = "Characterization of scientific cameras and detectors"
 readme = "README.md"
 license = "BSD-3-Clause"
