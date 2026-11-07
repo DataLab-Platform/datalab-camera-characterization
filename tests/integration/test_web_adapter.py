@@ -36,8 +36,8 @@ def _frame(title: str, value: int, exposure_time_s: float | None = None):
     return image
 
 
-def test_web_adapter_declares_verified_version_matrix_and_quickstart() -> None:
-    """The qualified bundle declares its exact verified browser target."""
+def test_web_adapter_declares_candidate_version_matrix_and_quickstart() -> None:
+    """The manifest names the browser-qualified candidate matrix."""
     manifest = get_web_manifest()
 
     assert WEB_STATUS == "verified"
@@ -45,7 +45,7 @@ def test_web_adapter_declares_verified_version_matrix_and_quickstart() -> None:
         "plugin_id": PLUGIN_ID,
         "plugin_version": __version__,
         "web_status": "verified",
-        "datalab_web_version": "0.9.0",
+        "datalab_web_version": "0.11.0",
         "pyodide_version": "0.26.4",
         "recipes": [
             {"recipe_id": recipe.recipe_id, "recipe_version": recipe.version}
