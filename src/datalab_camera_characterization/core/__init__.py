@@ -18,6 +18,7 @@ from .dark_current import (
     characterize_dark_current,
     validate_dark_ramp_inputs,
 )
+from .dark_dispersion import DispersionStatus, IntrinsicDarkDispersion
 from .metadata import metadata_key
 from .photon_transfer import (
     PhotonTransferCharacterization,
@@ -48,6 +49,8 @@ __all__ = [
     "CameraInputValidation",
     "DarkCurrentCharacterization",
     "DarkCurrentParameters",
+    "DispersionStatus",
+    "IntrinsicDarkDispersion",
     "PhotonTransferCharacterization",
     "PhotonTransferParameters",
     "RelativeCameraCharacterization",

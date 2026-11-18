@@ -63,7 +63,7 @@ def test_photon_transfer_ladder_measures_relative_dn_linearity() -> None:
 
 
 def test_photon_transfer_demo_recovers_sensor_truth() -> None:
-    """Gain, read noise and ADC-limited saturation match the simulated sensor."""
+    """Gain, reference dark noise and ADC-limited saturation match sensor truth."""
     images = demo.build_photon_transfer_campaign().objects
     inputs = {
         role: tuple(image for image in images if infer_frame_role(image) == kind)
@@ -84,12 +84,16 @@ def test_photon_transfer_demo_recovers_sensor_truth() -> None:
     assert rows["Conversion gain"][2] == "e-/LSB"
     assert len(inputs["dark_frames"]) == demo.PHOTON_TRANSFER_DARK_FRAMES
     assert rows["Conversion gain"][1] == pytest.approx(gain, rel=0.03)
-    # Electronic read noise of 3 e- plus 1/12 LSB^2 of ADC quantization.
-    assert rows["Read noise"][1] == pytest.approx(
-        gain * np.sqrt((3.0 / gain) ** 2 + 1.0 / 12.0), rel=0.1
+    # Dark shot noise contributes at the actual reference exposure; quantization
+    # variance is approximately 1/12 LSB^2 for this noisy simulated signal.
+    reference_s = rows["Noise reference exposure"][1]
+    assert rows["Dark temporal noise (electrons)"][1] == pytest.approx(
+        np.sqrt(3.0**2 + 0.2 * reference_s + gain**2 / 12.0), rel=0.1
     )
     assert 0.9 * adc_limit_e <= rows["Saturation capacity"][1] <= adc_limit_e
-    assert rows["Saturation capacity"][3] == "Reached"
+    assert rows["Saturation capacity"][3] == rows["Dynamic range"][3] == "Observed"
+    assert rows["Limiting response"][1] == "Repeated significant ADC clipping"
+    assert outputs["snr_vs_signal"].x.size < outputs["ptc"].x.size
     assert rows["Dynamic range"][1] == pytest.approx(
         20.0 * np.log10(adc_limit_e / 3.0), abs=1.5
     )
@@ -126,13 +130,29 @@ def test_dark_ramp_demo_recovers_dark_current_truth() -> None:
     outputs = {output.id: output.value for output in outcome.objects}
     hot_found = outputs["hot_pixel_map"].data == 1
     hot_truth = truth.dark_hot_pixel_mask
-    regular = outputs["hot_pixel_map"].data == 0
-    true_rates = truth.dark_current_map_e_per_s[regular]
+    included = outputs["summary_pixel_mask"].data.astype(bool)
+    true_rates = truth.dark_current_map_e_per_s[included]
+
+    assert len(data.objects) == 20
+    ramp = outputs["dark_ramp"]
+    np.testing.assert_array_equal(ramp.x, [0.5, 1, 2, 4, 8])
+    np.testing.assert_allclose(ramp.y[[0, -1]], [113.92, 322.89], atol=0.02, rtol=0)
+    assert rows["Summary pixels"][1] == np.count_nonzero(included) == 12251
 
     assert rows["Mean dark current"][1] == pytest.approx(np.mean(true_rates), rel=0.03)
     assert rows["Dark-current non-uniformity"][1] == pytest.approx(
         np.std(true_rates, ddof=1), rel=0.1
     )
+    # Independent simulator truth, not a population selected on either fit.
+    sensor_regular = ~(truth.dead_pixel_mask | truth.hot_pixel_mask | hot_truth)
+    true_sd = np.std(truth.dark_current_map_e_per_s[sensor_regular], ddof=1)
+    assert rows["Intrinsic dispersion pixels"][1] == np.count_nonzero(sensor_regular)
+    assert rows["Intrinsic dispersion 95% lower"][1] <= true_sd
+    assert rows["Intrinsic dispersion 95% upper"][1] >= true_sd
+    assert rows["Intrinsic dark-current dispersion"][1:3] == [
+        pytest.approx(true_sd, rel=0.005),
+        "e-/s",
+    ]
     true_positives = np.count_nonzero(hot_found & hot_truth)
     assert true_positives >= 0.95 * np.count_nonzero(hot_truth)
     assert true_positives >= 0.95 * np.count_nonzero(hot_found)

@@ -23,6 +23,8 @@ Select the frames, then choose **Plugins > Camera & Detector Characterization > 
 
 The inputs are checked before the computation. Errors stop the run. Warnings, such as zero or excessive temporal variance and excessive saturation, are kept with the results.
 
+The recipe groups darks by their exact exposure, in seconds. When every flat exposure has enough dark repeats, it matches the dark mean and sample variance at each level. A single dark exposure can instead serve the whole ladder; the fitted response then retains any exposure-dependent dark signal. If several dark exposures cover only part of the ladder, complete it or set **Single dark reference** to the exposure to use for every flat. Never pool different dark exposures. If none of the darks carries an exposure, supply the known common exposure of one series; do not enter a guessed value.
+
 **Parameters:** minimum frame and level counts, saturation level and warning fraction, optional maximum temporal variance (0 disables it), aggregation block size, candidate-pixel threshold and histogram bins. These are workflow criteria, not acceptance limits.
 
 ## Results
@@ -30,7 +32,7 @@ The inputs are checked before the computation. Errors stop the run. Warnings, su
 | Output | Type | Content |
 | --- | --- | --- |
 | `response` | Signal | Mean dark-subtracted signal versus exposure, with the metrics table |
-| `mean_dark` | Image | Mean of all dark frames |
+| `mean_dark` | Image | Mean of the dark series used for the selected spatial flat |
 | `mean_flat` | Image | Mean of the highest level kept by the linear fit |
 | `dsnu_like_map` | Image | Centered mean dark image, in LSB |
 | `prnu_like_map` | Image | Relative deviation of the dark-corrected flat image |
@@ -38,7 +40,7 @@ The inputs are checked before the computation. Errors stop the run. Warnings, su
 | `prnu_row_profile`, `prnu_column_profile` | Signal | Row and column means of the PRNU-like map |
 | `dsnu_distribution`, `prnu_distribution` | Signal | Histograms of both maps |
 
-The metrics table gives the response slope and intercept, the dark temporal noise, the largest fit residual, the maximum unsaturated signal, the relative dynamic range, the selected flat exposure, the spatial non-uniformities, the candidate pixels and the saturation onset. Every status is `Not assessed`: no pass/fail standard is applied.
+The metrics table gives the response slope and intercept, the dark temporal noise, the largest fit residual, the maximum unsaturated signal, the relative dynamic range, the selected flat exposure, the spatial non-uniformities, the candidate pixels and the saturation onset. It also identifies the dark series used for correction and for the noise measurement, with their frame counts. No pass/fail standard is applied.
 
 ## Method
 
@@ -50,6 +52,8 @@ temporal_variance_dn2 = mean_pixels(var_frames(pixel, ddof=1))
 temporal_noise_dn = sqrt(temporal_variance_dn2)
 relative_snr = mean_signal_dn / temporal_noise_dn
 ```
+
+`temporal_variance_dn2` is the raw flat variance. `signal_variance_dn2` subtracts the variance of the corresponding dark series; both arrays are kept in the response metadata. In Python, pass `{exposure_in_seconds: dark_stack, ...}` as the first argument to match a ladder. A bare stack denotes one series of unknown exposure unless an explicit `dark_reference_exposure_s` identifies it.
 
 - **Response:** a straight-line fit of `mean_signal_dn` versus exposure, on the levels below the saturation warning fraction. Residuals are given for every level.
 - **Saturation onset:** the first level that reaches the saturation warning fraction.
@@ -66,7 +70,8 @@ The [quickstart](getting-started.md#run-the-quickstart) campaign shows every out
 ## Limits
 
 - Results are relative quantities in LSB. The method does not claim EMVA 1288 compliance.
-- The PRNU-like map includes vignetting and dust: from frames alone, sensor PRNU and illumination cannot be separated.
+- The PRNU-like map includes vignetting, dust and residual temporal noise. A spatially uniform sensor under a nonuniform flat field can give a nonzero result. The DSNU-like map also retains noise when only a few darks are averaged. Neither map is an intrinsic PRNU or DSNU measurement.
+- The relative dynamic range describes the strongest retained signal divided by the measured dark temporal noise. It is not a full-well capacity or an EMVA dynamic range. Candidate thresholds are screening aids: clusters and extreme values can raise the spatial standard deviation used by the threshold.
 
 ## Python
 

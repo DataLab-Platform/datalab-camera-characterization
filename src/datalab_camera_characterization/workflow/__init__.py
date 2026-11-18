@@ -1,5 +1,6 @@
 """Headless Camera characterization workflows."""
 
+from .adc import infer_frame_role
 from .dark_current import DarkCurrentRecipeParameters, run_dark_current_characterization
 from .input_checks import (
     check_dark_current_inputs,
@@ -24,7 +25,6 @@ from .relative_dn import (
     FRAME_ROLE_METADATA_KEY,
     OUTPUT_ROLE_METADATA_KEY,
     CameraRecipeParameters,
-    infer_frame_role,
     run_relative_dn_characterization,
 )
 

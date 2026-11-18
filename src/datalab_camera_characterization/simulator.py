@@ -23,7 +23,7 @@ from datalab.plugins.tools import PluginTool
 from sigima.objects import ImageObj, create_image
 
 from .core import CameraSimulationParameters, simulate_camera_frames
-from .demo import series_images
+from .demo import series_images, tag_simulated_frame
 
 #: Largest number of pixels created by one acquisition (all frames together)
 MAX_ACQUISITION_PIXELS = 20_000_000
@@ -67,11 +67,19 @@ class CameraSimulatorSettings(gds.DataSet):
         "display", store=_SHUTTER
     )
     dark_frame_count = gds.IntItem(
-        "Dark frames",
+        "Dark frames per reference exposure",
         default=4,
         min=0,
         max=100,
-        help="Frames acquired shutter closed at the longest exposure time",
+    ).set_prop("display", active=_SHUTTER)
+    dark_reference = gds.ChoiceItem(
+        "Dark reference acquisition",
+        (
+            ("longest", "Single reference at longest exposure"),
+            ("bias", "Zero-exposure bias reference"),
+            ("matched", "Separate dark reference at each exposure"),
+        ),
+        default="longest",
     ).set_prop("display", active=_SHUTTER)
     _acquisition_end = gds.EndGroup("Acquisition")
 
@@ -237,6 +245,7 @@ class CameraSimulator(PluginInstrument):
         frame = simulate_camera_frames(parameters).frames_dn[0]
         role = "Flat" if shutter_open else "Dark"
         image = create_image(f"{role} {exposure_ms:g} ms", frame.copy())
+        tag_simulated_frame(image, parameters, role.lower())
         saturated = 100.0 * np.count_nonzero(frame >= self.saturation_dn) / frame.size
         summary = (
             f"{role} frame, {exposure_ms:g} ms: mean {np.mean(frame):.1f} LSB, "
@@ -252,7 +261,12 @@ class CameraSimulator(PluginInstrument):
         shutter_open = bool(settings.shutter_open)
         frame_count = int(settings.frame_count)
         dark_count = int(settings.dark_frame_count) if shutter_open else 0
-        total_frames = frame_count * len(exposures) + dark_count
+        reference_times = {
+            "longest": (max(exposures),),
+            "bias": (0.0,),
+            "matched": tuple(dict.fromkeys(exposures)),
+        }[settings.dark_reference]
+        total_frames = frame_count * len(exposures) + dark_count * len(reference_times)
         pixels = total_frames * int(settings.width) * int(settings.height)
         if pixels > MAX_ACQUISITION_PIXELS:
             raise ValueError(
@@ -261,13 +275,12 @@ class CameraSimulator(PluginInstrument):
                 "or the number of frames"
             )
         images: list[ImageObj] = []
-        if dark_count:
-            longest = max(exposures)
+        for dark_ms in reference_times if dark_count else ():
             images.extend(
                 series_images(
-                    f"Dark {longest:g} ms",
+                    f"Dark {dark_ms:g} ms",
                     self.sensor_parameters(
-                        longest, dark_count, False, next(self._noise_streams)
+                        dark_ms, dark_count, False, next(self._noise_streams)
                     ),
                     "dark",
                 )

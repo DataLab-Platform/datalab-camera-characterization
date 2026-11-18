@@ -94,6 +94,28 @@ def _sensor_parameters(seed: int, **overrides: object) -> CameraSimulationParame
     return CameraSimulationParameters(**values)
 
 
+def tag_simulated_frame(
+    image: ImageObj, parameters: CameraSimulationParameters, role: str
+) -> None:
+    """Describe the actual acquisition and its native, right-aligned ADC codes."""
+    image.zunit = "LSB"
+    image.metadata.update(
+        {
+            metadata_key("synthetic"): True,
+            metadata_key("simulation_seed"): parameters.seed,
+            FRAME_ROLE_METADATA_KEY: role,
+            EXPOSURE_TIME_METADATA_KEY: parameters.exposure_time_s,
+            metadata_key("bit_depth"): parameters.bit_depth,
+            metadata_key("saturation_dn"): parameters.saturation_dn,
+            metadata_key("bit_shift"): 0,
+            metadata_key("sensor_id"): f"sim:{parameters.seed}",
+            metadata_key("conversion_gain_e_per_dn"): (
+                parameters.conversion_gain_e_per_dn
+            ),
+        }
+    )
+
+
 def series_images(
     title_prefix: str,
     parameters: CameraSimulationParameters,
@@ -104,10 +126,7 @@ def series_images(
     frames = simulate_camera_frames(parameters).frames_dn
     for index, frame in enumerate(frames, start=1):
         image = create_image(f"{title_prefix} {index:02d}", frame.copy())
-        image.metadata[metadata_key("synthetic")] = True
-        image.metadata[metadata_key("simulation_seed")] = parameters.seed
-        image.metadata[FRAME_ROLE_METADATA_KEY] = role
-        image.metadata[EXPOSURE_TIME_METADATA_KEY] = parameters.exposure_time_s
+        tag_simulated_frame(image, parameters, role)
         images.append(image)
     return images
 

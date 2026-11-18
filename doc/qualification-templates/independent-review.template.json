@@ -1,0 +1,18 @@
+{
+  "plugin_version": null,
+  "wheel_sha256": null,
+  "campaign_record_sha256": null,
+  "reviewed_reports": {
+    "org.datalab.camera-characterization:relative-dn-characterization": null,
+    "org.datalab.camera-characterization:photon-transfer": null,
+    "org.datalab.camera-characterization:dark-current": null
+  },
+  "reviewer_name": null,
+  "affiliation": null,
+  "qualification": null,
+  "conflict_of_interest": null,
+  "independent": null,
+  "reviewed_at": null,
+  "assessment": null,
+  "decision": null
+}

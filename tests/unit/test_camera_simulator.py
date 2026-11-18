@@ -117,6 +117,35 @@ def test_dark_ramp_sequence_is_ready_for_the_dark_current_method() -> None:
     assert _ready(DARK_CURRENT_RECIPE, images)
 
 
+@pytest.mark.parametrize(
+    ("reference", "expected"), [("bias", [0.0, 0.0]), ("matched", [1, 1, 5, 5])]
+)
+def test_reference_schedule(reference, expected) -> None:
+    """Bias and exposure-matched acquisitions carry the actual reference times."""
+    camera = CameraSimulator()
+    camera.settings.mode = "sequence"
+    camera.settings.exposures_ms = "1, 5"
+    camera.settings.dark_frame_count = 2
+    camera.settings.dark_reference = reference
+    dark_times_ms = [
+        obj.metadata[EXPOSURE_TIME_METADATA_KEY] * 1000
+        for obj in camera.acquire().objects
+        if obj.metadata[FRAME_ROLE_METADATA_KEY] == "dark"
+    ]
+    assert dark_times_ms == expected
+
+
+def test_matched_reference_stacks_count_toward_memory_limit() -> None:
+    camera = CameraSimulator()
+    camera.settings.mode = "sequence"
+    camera.settings.exposures_ms = "1, 2, 4"
+    camera.settings.width = camera.settings.height = 1024
+    camera.settings.dark_reference = "matched"
+    camera.settings.dark_frame_count = 6
+    with pytest.raises(ValueError, match="megapixels"):
+        camera.acquire()
+
+
 def test_invalid_settings_are_reported() -> None:
     """Unreadable exposure lists and oversized acquisitions are rejected."""
     assert parse_exposures_ms("1; 2 4,8") == (1.0, 2.0, 4.0, 8.0)

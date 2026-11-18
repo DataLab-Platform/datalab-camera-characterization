@@ -1,0 +1,20 @@
+{
+  "plugin_version": null,
+  "wheel_sha256": null,
+  "recipe_id": null,
+  "recipe_version": null,
+  "campaign_sha256": null,
+  "protocol_sha256": null,
+  "analyst": null,
+  "environment": null,
+  "parameters": null,
+  "estimator": null,
+  "population": null,
+  "exclusions": null,
+  "acceptance_criteria": null,
+  "results": null,
+  "repeatability": null,
+  "independent_comparison": {"path": null, "sha256": null},
+  "uncertainty_budget": {"path": null, "sha256": null},
+  "passed": null
+}

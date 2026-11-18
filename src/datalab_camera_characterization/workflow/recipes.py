@@ -35,7 +35,7 @@ EXPOSURE_TIME = RecipeMetadataRequirement(
 )
 FRAME_ROLE_HINT = RecipeMetadataRequirement(
     FRAME_ROLE_METADATA_KEY,
-    "'dark' or 'flat'; without it, frames carrying an exposure time are flat",
+    "'dark' or 'flat'; assign untagged frames explicitly to the appropriate slot",
     required=False,
 )
 
@@ -139,7 +139,8 @@ DARK_CURRENT_RECIPE = RecipeDescriptor(
                 EXPOSURE_TIME,
                 RecipeMetadataRequirement(
                     FRAME_ROLE_METADATA_KEY,
-                    "Frames tagged 'flat' are left out",
+                    "Only frames tagged 'dark' are suggested; bind untagged frames "
+                    "explicitly to the dark ramp",
                     required=False,
                 ),
             ),

@@ -194,6 +194,8 @@ def _validate_stack(
     parameters: CameraValidationParameters,
     aggregation_block_size: int,
     diagnostics: list[CameraInputDiagnostic],
+    *,
+    check_saturation: bool = True,
 ) -> _StackInfo | None:
     """Validate one frame stack and return properties safe for calculations."""
     try:
@@ -263,10 +265,10 @@ def _validate_stack(
             )
         )
 
-    saturation_fraction = _fraction_at_or_above(
-        value,
-        parameters.saturation_dn,
-        aggregation_block_size,
+    saturation_fraction = (
+        _fraction_at_or_above(value, parameters.saturation_dn, aggregation_block_size)
+        if check_saturation
+        else 0.0
     )
     if saturation_fraction >= parameters.saturation_fraction_warning:
         diagnostics.append(
@@ -294,6 +296,7 @@ def validate_camera_inputs(
     parameters: CameraValidationParameters | None = None,
     *,
     aggregation_block_size: int = 1,
+    check_flat_saturation: bool = True,
 ) -> CameraInputValidation:
     """Validate Camera inputs without mutating data or raising dataset errors.
 
@@ -302,6 +305,8 @@ def validate_camera_inputs(
         flat_series: Uniform-illumination stacks in increasing exposure order
         parameters: Explicit validation thresholds
         aggregation_block_size: Maximum frames converted to float together
+        check_flat_saturation: Use the whole-frame saturation check. PTC instead
+         tests the off-defect population after the darks have been processed.
 
     Returns:
         Structured diagnostics; errors block characterization
@@ -410,12 +415,13 @@ def validate_camera_inputs(
             parameters,
             aggregation_block_size,
             diagnostics,
+            check_saturation=check_flat_saturation,
         )
         if stack_info is not None:
             stack_infos.append(stack_info)
             flat_stack_infos.append(stack_info)
 
-    if len(series_values) >= parameters.minimum_flat_levels:
+    if check_flat_saturation and len(series_values) >= parameters.minimum_flat_levels:
         unsaturated_count = sum(
             stack_info.saturation_fraction < parameters.saturation_fraction_warning
             for stack_info in flat_stack_infos
