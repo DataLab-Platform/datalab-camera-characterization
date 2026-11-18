@@ -1,0 +1,24 @@
+{
+  "artifact": {"path": "raw-campaign.h5", "sha256": null},
+  "synthetic": null,
+  "license": null,
+  "camera": {
+    "manufacturer": null,
+    "model": null,
+    "sensor": null,
+    "serial_number": null,
+    "bit_depth": null,
+    "width": null,
+    "height": null
+  },
+  "acquisition": {
+    "captured_at": null,
+    "operator": null,
+    "protocol": {"path": "acquisition-protocol.md", "sha256": null},
+    "linear_raw": null,
+    "independent_run_count": null,
+    "dark_frame_count": null,
+    "flat_frame_count": null,
+    "flat_level_count": null
+  }
+}

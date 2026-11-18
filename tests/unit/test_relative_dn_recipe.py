@@ -1,4 +1,4 @@
-"""Tests for the headless relative-DN Camera recipe."""
+"""Tests for the headless relative-LSB Camera recipe."""
 
 from __future__ import annotations
 
@@ -8,7 +8,10 @@ from datalab.plugins.recipes import RecipeExecutionContext, RecipeValidationErro
 from sigima.objects import ImageObj, SignalObj, TableResult, create_image
 
 import datalab_camera_characterization.core.aggregation as aggregation
-from datalab_camera_characterization.core import CameraCharacterizationError
+from datalab_camera_characterization.core import (
+    CameraCharacterizationError,
+    metadata_key,
+)
 from datalab_camera_characterization.workflow import (
     CANDIDATE_THRESHOLD_METADATA_KEY,
     EXPOSURE_TIME_METADATA_KEY,
@@ -20,10 +23,7 @@ from datalab_camera_characterization.workflow import (
 
 def _frame(title: str, value: int, exposure_time_s: float | None = None) -> ImageObj:
     """Create one 2D Camera frame with optional exposure metadata."""
-    image = create_image(title, np.full((2, 3), value, dtype=np.uint16))
-    if exposure_time_s is not None:
-        image.metadata[EXPOSURE_TIME_METADATA_KEY] = exposure_time_s
-    return image
+    return _array_frame(title, np.full((2, 3), value, dtype=np.uint16), exposure_time_s)
 
 
 def _array_frame(
@@ -33,6 +33,11 @@ def _array_frame(
 ) -> ImageObj:
     """Create one Camera frame from explicit pixel data."""
     image = create_image(title, data)
+    image.zunit = "LSB"
+    image.metadata[metadata_key("bit_depth")] = 12
+    image.metadata[metadata_key("bit_shift")] = 0
+    if title.startswith("dark") and exposure_time_s is None:
+        exposure_time_s = 0.0
     if exposure_time_s is not None:
         image.metadata[EXPOSURE_TIME_METADATA_KEY] = exposure_time_s
     return image
@@ -85,6 +90,7 @@ def test_relative_dn_recipe_builds_anchored_cross_panel_outcome(
     ]
     response = outcome.objects[0].value
     assert isinstance(response, SignalObj)
+    assert response.yunit == "LSB"
     np.testing.assert_array_equal(response.x, (1.0, 2.0, 3.0))
     np.testing.assert_array_equal(response.y, (20.0, 40.0, 60.0))
     assert response.metadata[OUTPUT_ROLE_METADATA_KEY] == "response"
@@ -114,8 +120,9 @@ def test_relative_dn_recipe_builds_anchored_cross_panel_outcome(
     assert (mean_flat.xunit, mean_flat.yunit, mean_flat.zunit) == (
         "mm",
         "mm",
-        "DN",
+        "LSB",
     )
+    assert all(image.zunit == "DN" for image in (*dark, *flats))
 
     outputs = {output.id: output.value for output in outcome.objects}
     dsnu_like_map = outputs["dsnu_like_map"]
@@ -337,6 +344,7 @@ def test_recipe_stops_before_outputs_when_all_flats_are_saturated() -> None:
 def test_recipe_parameters_disable_zero_variance_warning_threshold() -> None:
     """The DataSet sentinel maps to the core's optional variance threshold."""
     parameters = CameraRecipeParameters()
+    parameters.saturation_dn = 100.0
     parameters.maximum_temporal_variance_dn2 = 0.0
 
     assert parameters.to_validation_parameters().maximum_temporal_variance_dn2 is None

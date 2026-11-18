@@ -33,7 +33,7 @@ DEMO_ICON = "datalab_camera_characterization:icons/camera_demo.svg"
 
 CAMERA_QUICKSTART = PluginExample(
     id="quickstart",
-    title=_("Relative-DN Camera quickstart"),
+    title=_("Relative-LSB Camera quickstart"),
     description=_("Synthetic dark and flat frames for a first Camera characterization"),
     resource=("datalab_camera_characterization:examples/camera_quickstart.h5"),
     recipe_ids=(RELATIVE_DN_RECIPE.recipe_id,),
@@ -93,7 +93,7 @@ class CameraDetectorCharacterizationPlugin(PluginBase):
         return CameraSimulator()
 
     def run_relative_dn(self) -> RecipeOutcome | None:
-        """Run the relative-DN characterization on the selected frames."""
+        """Run the relative-LSB characterization on the selected frames."""
         return self.start_recipe(RELATIVE_DN_RECIPE.recipe_id)
 
     def run_photon_transfer(self) -> RecipeOutcome | None:

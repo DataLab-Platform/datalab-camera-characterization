@@ -20,13 +20,13 @@ from ..demo import DARK_RAMP_DEMO, PHOTON_TRANSFER_DEMO, materialize_generated_e
 from ..simulator import CAMERA_SIMULATOR_TOOL, CameraSimulator
 from ..workflow import (
     CAMERA_RECIPES,
+    FRAME_ROLE_METADATA_KEY,
     RELATIVE_DN_RECIPE,
     CameraRecipeParameters,
-    infer_frame_role,
 )
 
-WEB_STATUS = "verified"
-DATALAB_WEB_VERSION = "0.11.0"
+WEB_STATUS = "unverified"
+DATALAB_WEB_VERSION = "0.11.1"
 PYODIDE_VERSION = "0.26.4"
 QUICKSTART_FILENAME = "camera_quickstart.h5"
 
@@ -34,7 +34,7 @@ CAMERA_QUICKSTART = PluginExample(
     id="quickstart",
     title="Synthetic camera characterization",
     resource=("datalab_camera_characterization:examples/camera_quickstart.h5"),
-    description="Physically structured dark and flat frames for relative-DN analysis.",
+    description="Physically structured dark and flat frames for relative-LSB analysis.",
     recipe_ids=(RELATIVE_DN_RECIPE.recipe_id,),
 )
 
@@ -106,19 +106,21 @@ def read_quickstart_bytes() -> bytes:
 def build_recipe_inputs(images: Sequence[ImageObj]) -> RecipeInputs:
     """Map browser-imported images to Camera roles using stable metadata.
 
-    An explicit frame-role metadata value wins; otherwise flat frames carry an
-    exposure time and images without one are dark frames. The browser UI
-    remains responsible for passing only the images selected for one campaign.
+    A time stamp describes both dark and illuminated frames. Without an
+    explicit role this headless shortcut cannot ask the operator for a binding.
     """
     image_values = tuple(images)
     if any(not isinstance(image, ImageObj) for image in image_values):
         raise RecipeValidationError("Camera Web inputs must be image objects")
-    dark_frames = tuple(
-        image for image in image_values if infer_frame_role(image) == "dark"
-    )
-    flat_frames = tuple(
-        image for image in image_values if infer_frame_role(image) == "flat"
-    )
+    roles: dict[str, list[ImageObj]] = {"dark": [], "flat": []}
+    for image in image_values:
+        role = image.metadata.get(FRAME_ROLE_METADATA_KEY)
+        if role not in ("dark", "flat"):
+            raise RecipeValidationError(
+                f"Assign {image.title!r} a dark or flat frame role before running"
+            )
+        roles[role].append(image)
+    dark_frames, flat_frames = tuple(roles["dark"]), tuple(roles["flat"])
     if not dark_frames:
         raise RecipeValidationError("Camera Web inputs require dark frames")
     if not flat_frames:

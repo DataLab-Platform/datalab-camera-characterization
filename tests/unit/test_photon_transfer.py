@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 import numpy as np
 import pytest
 from datalab.plugins.recipes import RecipeExecutionContext, RecipeValidationError
@@ -13,6 +15,7 @@ from datalab_camera_characterization.core import (
     CameraSimulationParameters,
     PhotonTransferParameters,
     characterize_photon_transfer,
+    metadata_key,
     simulate_camera_frames,
 )
 from datalab_camera_characterization.workflow import (
@@ -47,7 +50,7 @@ def _frames(exposure_time_s: float, rate: float, stream: int, count: int = 6):
 
 def _campaign(levels: tuple[float, ...] = (1, 2, 3, 4, 5, 6, 7, 8)):
     """Return dark frames and increasing flat series."""
-    dark = _frames(1.0, 0.0, 1, count=4)
+    dark = _frames(0.0, 0.0, 1, count=4)
     flats = tuple(
         CameraExposureSeries(_frames(t, 1_000.0, stream), t)
         for stream, t in enumerate(levels, start=2)
@@ -59,10 +62,10 @@ def test_photon_transfer_recovers_gain_and_read_noise() -> None:
     """The variance-versus-mean slope gives the conversion gain."""
     dark, flats = _campaign()
 
-    result = characterize_photon_transfer(dark, flats)
+    result = characterize_photon_transfer({0.0: dark}, flats)
 
     assert result.conversion_gain_e_per_dn == pytest.approx(GAIN_E_PER_DN, rel=0.05)
-    # Quantization adds 1/12 DN^2 to the electronic read noise.
+    # Quantization adds 1/12 LSB^2 to the electronic read noise.
     expected_read_noise = GAIN_E_PER_DN * np.sqrt(
         (READ_NOISE_E / GAIN_E_PER_DN) ** 2 + 1.0 / 12.0
     )
@@ -98,6 +101,9 @@ def test_photon_transfer_parameters_are_validated(kwargs: dict) -> None:
 def _image(frame: np.ndarray, role: str, exposure_time_s: float):
     """Wrap one frame with the plugin acquisition metadata."""
     image = create_image(f"{role} {exposure_time_s:g}", frame.copy())
+    image.zunit = "LSB"
+    image.metadata[metadata_key("bit_depth")] = 12
+    image.metadata[metadata_key("bit_shift")] = 0
     image.metadata[FRAME_ROLE_METADATA_KEY] = role
     image.metadata[EXPOSURE_TIME_METADATA_KEY] = exposure_time_s
     return image
@@ -107,7 +113,7 @@ def test_photon_transfer_recipe_builds_anchored_outputs() -> None:
     """The recipe returns the curve, its fit, noise and SNR signals and a table."""
     dark, flats = _campaign()
     inputs = {
-        "dark_frames": tuple(_image(frame, "dark", 1.0) for frame in dark),
+        "dark_frames": tuple(_image(frame, "dark", 0.0) for frame in dark),
         "flat_frames": tuple(
             _image(frame, "flat", series.exposure_time_s)
             for series in flats
@@ -140,3 +146,44 @@ def test_photon_transfer_recipe_requires_its_parameters() -> None:
     """A foreign parameter DataSet is rejected before reading inputs."""
     with pytest.raises(RecipeValidationError, match="PhotonTransferRecipeParameters"):
         PHOTON_TRANSFER_RECIPE.run({}, None, RecipeExecutionContext())
+
+
+def test_centered_recipe_preserves_raw_noise_and_replayable_provenance():
+    signs = 2 * (np.indices((16, 16)).sum(axis=0) % 2) - 1
+    signals = np.array([16, 32, 64, 128, 256, 512, 1024])
+    inputs = {
+        "dark_frames": tuple(_image(100.0 + k * signs, "dark", 8.0) for k in (-1, 1)),
+        "flat_frames": tuple(
+            _image(
+                100 + s + k * (np.sqrt((2 + s / 2) / 2) * signs + 0.02 * s),
+                "flat",
+                s / 1000,
+            )
+            for s in signals
+            for k in (-1, 1)
+        ),
+    }
+    p = PhotonTransferRecipeParameters.create(variance_mode="centered_pairs")
+    outcome = PHOTON_TRANSFER_RECIPE.run(inputs, p, RecipeExecutionContext())
+    objects = {o.id: o.value for o in outcome.objects}
+    table = outcome.results[0].value
+    replay = table.attrs["ptc_analysis"]
+    assert replay == objects["ptc"].metadata[metadata_key("ptc_analysis")]
+    json.dumps(replay, allow_nan=False)
+    assert replay["variance_mode"] == "centered_pairs"
+    assert replay["dark_pairs"][0]["exposure_s"] == 8.0
+    np.testing.assert_allclose(objects["ptc"].y, signals / 2)
+    np.testing.assert_allclose(
+        replay["raw_temporal_variance_dn2"], signals / 2 + 2 * (0.02 * signals) ** 2
+    )
+    np.testing.assert_allclose(
+        objects["noise_vs_signal"].y,
+        2 * np.sqrt(2 + signals / 2 + 2 * (0.02 * signals) ** 2),
+    )
+    rows = {r[0]: r for r in table.data}
+    assert rows["Conversion gain"][1] == pytest.approx(2)
+    assert rows["Raw gain"][1] == pytest.approx(1.086, abs=0.001)
+    assert rows["Saturation capacity"][1:] == [None, "e-", "Indeterminate"]
+    assert rows["Dynamic range"][1:] == [None, "dB", "Indeterminate"]
+    assert "Estimated read noise" not in rows
+    assert "frame_mean_fluctuation" in {d.code for d in outcome.diagnostics}

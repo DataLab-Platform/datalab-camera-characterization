@@ -1,0 +1,21 @@
+{
+  "schema_version": 2,
+  "plugin_version": null,
+  "wheel_sha256": null,
+  "campaign": {"path": "campaign-record.json", "sha256": null},
+  "methods": {
+    "org.datalab.camera-characterization:relative-dn-characterization": {
+      "recipe_version": "1.1.0",
+      "report": {"path": "relative/report.json", "sha256": null}
+    },
+    "org.datalab.camera-characterization:photon-transfer": {
+      "recipe_version": "1.0.0",
+      "report": {"path": "ptc/report.json", "sha256": null}
+    },
+    "org.datalab.camera-characterization:dark-current": {
+      "recipe_version": "1.0.0",
+      "report": {"path": "dark/report.json", "sha256": null}
+    }
+  },
+  "review": {"path": "independent-review.json", "sha256": null}
+}

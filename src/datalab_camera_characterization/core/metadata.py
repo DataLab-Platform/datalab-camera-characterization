@@ -28,3 +28,9 @@ def metadata_key(local_key: str) -> str:
             "'_' or '-'"
         )
     return f"{METADATA_PREFIX}.{local_key}"
+
+
+BIT_DEPTH_KEY = metadata_key("bit_depth")
+BIT_SHIFT_KEY = metadata_key("bit_shift")
+SATURATION_KEY = metadata_key("saturation_dn")
+FRAME_ROLE_KEY = metadata_key("frame_role")

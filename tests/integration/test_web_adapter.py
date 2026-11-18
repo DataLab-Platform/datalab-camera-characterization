@@ -18,6 +18,7 @@ from datalab_camera_characterization.adapters.web import (
     read_quickstart_bytes,
     run_relative_dn_recipe,
 )
+from datalab_camera_characterization.core import metadata_key
 from datalab_camera_characterization.demo import DARK_RAMP_DEMO, PHOTON_TRANSFER_DEMO
 from datalab_camera_characterization.workflow import (
     DARK_CURRENT_RECIPE,
@@ -31,21 +32,27 @@ from datalab_camera_characterization.workflow import (
 def _frame(title: str, value: int, exposure_time_s: float | None = None):
     """Create one browser-imported Camera frame."""
     image = create_image(title, np.full((2, 3), value, dtype=np.uint16))
-    if exposure_time_s is not None:
-        image.metadata[EXPOSURE_TIME_METADATA_KEY] = exposure_time_s
+    image.zunit = "LSB"
+    image.metadata[FRAME_ROLE_METADATA_KEY] = (
+        "dark" if exposure_time_s is None else "flat"
+    )
+    image.metadata[metadata_key("bit_shift")] = 0
+    image.metadata[EXPOSURE_TIME_METADATA_KEY] = (
+        0.0 if exposure_time_s is None else exposure_time_s
+    )
     return image
 
 
 def test_web_adapter_declares_candidate_version_matrix_and_quickstart() -> None:
-    """The manifest names the browser-qualified candidate matrix."""
+    """The candidate identifies its target without inheriting historical evidence."""
     manifest = get_web_manifest()
 
-    assert WEB_STATUS == "verified"
+    assert WEB_STATUS == "unverified"
     assert manifest == {
         "plugin_id": PLUGIN_ID,
         "plugin_version": __version__,
-        "web_status": "verified",
-        "datalab_web_version": "0.11.0",
+        "web_status": "unverified",
+        "datalab_web_version": "0.11.1",
         "pyodide_version": "0.26.4",
         "recipes": [
             {"recipe_id": recipe.recipe_id, "recipe_version": recipe.version}
@@ -82,7 +89,7 @@ def test_web_adapter_declares_candidate_version_matrix_and_quickstart() -> None:
 
 
 def test_web_adapter_maps_imported_images_and_runs_headless_recipe() -> None:
-    """Browser-imported images use exposure metadata for deterministic roles."""
+    """Browser-imported images use declared roles, even when darks have a time."""
     dark = (_frame("dark 1", 9), _frame("dark 2", 11))
     flats = tuple(
         _frame(f"flat {exposure} {index}", value, exposure)
@@ -111,6 +118,13 @@ def test_web_adapter_rejects_campaign_without_both_roles() -> None:
     """Browser role inference fails before executing an incomplete campaign."""
     with pytest.raises(RecipeValidationError, match="flat"):
         build_recipe_inputs((_frame("dark 1", 10), _frame("dark 2", 10)))
+
+
+def test_web_adapter_does_not_infer_illumination_from_exposure_time() -> None:
+    image = _frame("Unidentified exposure", 100, 1)
+    del image.metadata[FRAME_ROLE_METADATA_KEY]
+    with pytest.raises(RecipeValidationError, match="Assign.*frame role"):
+        build_recipe_inputs((image,))
 
 
 def test_web_adapter_generates_examples_with_explicit_frame_roles() -> None:

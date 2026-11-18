@@ -145,9 +145,15 @@ def test_desktop_entry_points_require_registered_plugin() -> None:
             entry_point()
 
 
-def _frame(title: str, value: int, exposure_time_s: float | None = None) -> ImageObj:
-    """Create one recipe input image."""
+def _frame(
+    title: str, value: int, exposure_time_s: float | None = None, *, role: str = "flat"
+) -> ImageObj:
+    """Create a labelled native-code frame, optionally missing its exposure."""
     image = create_image(title, np.full((2, 3), value, dtype=np.uint16))
+    image.zunit = "LSB"
+    image.metadata[FRAME_ROLE_METADATA_KEY] = role
+    image.metadata[metadata_key("saturation_dn")] = 100
+    image.metadata[metadata_key("bit_shift")] = 0
     if exposure_time_s is not None:
         image.metadata[EXPOSURE_TIME_METADATA_KEY] = exposure_time_s
     return image
@@ -155,7 +161,7 @@ def _frame(title: str, value: int, exposure_time_s: float | None = None) -> Imag
 
 def _small_campaign() -> tuple[tuple[ImageObj, ...], tuple[ImageObj, ...]]:
     """Return two dark frames and two frames at each of two flat exposures."""
-    dark = (_frame("dark 1", 9), _frame("dark 2", 11))
+    dark = (_frame("dark 1", 9, 0, role="dark"), _frame("dark 2", 11, 0, role="dark"))
     flats = tuple(
         frame
         for mean_dn, exposure_time_s in ((30, 1.0), (50, 2.0))
@@ -190,7 +196,7 @@ def test_selection_readiness_explains_what_each_method_needs() -> None:
         assert relative.status is RecipeReadinessStatus.READY
         assert relative.bindings == {"dark_frames": dark, "flat_frames": flats}
 
-        # Two exposure levels are enough for relative DN, not for a PTC
+        # Two exposure levels are enough for relative LSB, not for a PTC
         photon_transfer = plugin.assess_recipe(PHOTON_TRANSFER_RECIPE.recipe_id)
         assert photon_transfer.status is RecipeReadinessStatus.NOT_READY
         assert [item.code for item in photon_transfer.diagnostics] == [
@@ -198,16 +204,21 @@ def test_selection_readiness_explains_what_each_method_needs() -> None:
         ]
 
         # A dark ramp needs an exposure time on every dark frame
-        dark_current = plugin.assess_recipe(DARK_CURRENT_RECIPE.recipe_id)
+        untimed = (
+            _frame("untimed 1", 9, role="dark"),
+            _frame("untimed 2", 11, role="dark"),
+        )
+        dark_current = plugin.assess_recipe(
+            DARK_CURRENT_RECIPE.recipe_id, (*dark, *untimed)
+        )
         assert dark_current.status is RecipeReadinessStatus.NOT_READY
         (issue,) = dark_current.issues
         assert issue.code is RecipeInputIssueCode.MISSING_METADATA
         assert issue.details["key"] == EXPOSURE_TIME_METADATA_KEY
         assert issue.details["count"] == 2
 
-        # An explicit role wins over the exposure-time convention
+        # A labelled flat with no exposure belongs to the slot but is not ready.
         tagged_flat = _frame("dark-looking flat", 30)
-        tagged_flat.metadata[FRAME_ROLE_METADATA_KEY] = "flat"
         readiness = plugin.assess_recipe(
             RELATIVE_DN_RECIPE.recipe_id, (*dark, *flats, tagged_flat)
         )
@@ -340,7 +351,7 @@ def test_desktop_quickstart_action_opens_and_runs_packaged_example(
             image.title for image in window.imagepanel.objmodel.get_all_objects()[20:]
         }
         assert output_image_titles == {
-            "Mean dark image",
+            "Mean dark image (0.04 s)",
             "Mean flat image (0.04 s)",
             "Relative DSNU-like map",
             "Relative PRNU-like map",
@@ -381,7 +392,6 @@ def test_desktop_action_explains_invalid_campaign_without_partial_outputs(
     """A frame lacking its exposure time is named before any computation."""
     dark, flats = _small_campaign()
     untimed_flat = _frame("flat missing exposure", 29)
-    untimed_flat.metadata[FRAME_ROLE_METADATA_KEY] = "flat"
     selected_images = (*dark, untimed_flat, *flats)
     dialogs: list[RecipeInputDialog] = []
 
@@ -421,7 +431,7 @@ def test_desktop_action_explains_invalid_campaign_without_partial_outputs(
 
 def test_recipe_runner_commits_camera_outputs_and_anchored_table() -> None:
     """The Desktop runner attaches metrics and provenance to committed outputs."""
-    dark = (_frame("dark 1", 9), _frame("dark 2", 11))
+    dark = (_frame("dark 1", 9, 0, role="dark"), _frame("dark 2", 11, 0, role="dark"))
     flats = tuple(
         frame
         for mean_dn, exposure_time_s in ((30, 1.0), (50, 2.0), (70, 3.0))
@@ -554,7 +564,7 @@ def test_desktop_dark_ramp_example_seeds_only_its_recipe_parameters(
         (dark_current,) = edited
         assert dark_current.conversion_gain_e_per_dn == 2.0
         assert outcome is not None
-        assert len(window.imagepanel) == 20 + 3
+        assert len(window.imagepanel) == 20 + 4
         assert len(window.signalpanel) == 3
         hot_map = next(
             image
@@ -562,12 +572,18 @@ def test_desktop_dark_ramp_example_seeds_only_its_recipe_parameters(
             if image.title.startswith("Hot-pixel map")
         )
         assert 0 < np.count_nonzero(hot_map.data == 1) < 100
+        summary_mask = next(
+            image
+            for image in window.imagepanel.objmodel.get_all_objects()
+            if image.title.startswith("Dark-ramp summary mask")
+        )
+        assert np.count_nonzero(summary_mask.data) == 12251
 
 
 def test_trying_the_photon_transfer_ladder_with_relative_dn(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """One exposure ladder also feeds the relative-DN linearity analysis."""
+    """One exposure ladder also feeds the relative-LSB linearity analysis."""
     monkeypatch.setattr(RecipeInputDialog, "exec", _no_assignment_dialog)
     monkeypatch.setattr(CameraRecipeParameters, "edit", lambda *_a, **_k: True)
     with (

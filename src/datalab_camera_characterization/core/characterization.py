@@ -1,4 +1,4 @@
-"""Batch reference implementation of relative Camera metrics in DN."""
+"""Batch reference implementation of relative Camera metrics in LSB."""
 
 from __future__ import annotations
 
@@ -9,30 +9,21 @@ from collections.abc import Sequence
 import numpy as np
 
 from .aggregation import (
-    ImageStackSource,
     _fraction_at_or_above,
     compute_image_stack_statistics,
 )
+from .dark_reference import DarkInput, DarkReferenceStatistics, prepare_dark_references
+from .errors import CameraCharacterizationError
 from .validation import (
     CameraExposureSeries,
     CameraInputValidation,
     CameraValidationParameters,
-    validate_camera_inputs,
 )
-
-
-class CameraCharacterizationError(ValueError):
-    """Raised when structured input errors block characterization."""
-
-    def __init__(self, validation: CameraInputValidation) -> None:
-        self.validation = validation
-        codes = ", ".join(diagnostic.code for diagnostic in validation.errors)
-        super().__init__(f"Camera input validation failed: {codes}")
 
 
 @dataclasses.dataclass(frozen=True)
 class RelativeCameraCharacterization:
-    """Relative temporal Camera metrics expressed only in DN and seconds."""
+    """Relative temporal Camera metrics expressed only in LSB and seconds."""
 
     validation: CameraInputValidation
     exposure_times_s: np.ndarray
@@ -51,6 +42,8 @@ class RelativeCameraCharacterization:
     relative_dynamic_range: float
     saturation_onset_exposure_s: float | None
     saturation_onset_signal_dn: float | None
+    dark_reference: DarkReferenceStatistics
+    signal_variance_dn2: np.ndarray
 
 
 def _readonly(array: np.ndarray) -> np.ndarray:
@@ -60,19 +53,23 @@ def _readonly(array: np.ndarray) -> np.ndarray:
 
 
 def characterize_relative_dn(
-    dark_frames_dn: ImageStackSource | None,
+    dark_frames_dn: DarkInput | None,
     flat_series: Sequence[CameraExposureSeries] | None,
     validation_parameters: CameraValidationParameters | None = None,
     *,
     aggregation_block_size: int = 1,
+    dark_reference_exposure_s: float | None = None,
+    short_dark_exposure_s: float | None = None,
 ) -> RelativeCameraCharacterization:
     """Compute relative metrics with bounded mean and variance aggregation.
 
     Args:
-        dark_frames_dn: Dark 3D stack or sequence of 2D frame arrays
+        dark_frames_dn: One dark stack or an exposure-in-seconds to stack mapping
         flat_series: Uniform-illumination stacks in increasing exposure order
         validation_parameters: Explicit validation and saturation thresholds
         aggregation_block_size: Maximum frames converted to float together
+        dark_reference_exposure_s: Force a single correction at this exposure
+        short_dark_exposure_s: Explicit camera-minimum bias for noise estimation
 
     Returns:
         Relative response, temporal noise, SNR, saturation, and linearity data
@@ -82,27 +79,18 @@ def characterize_relative_dn(
          error
     """
     parameters = validation_parameters or CameraValidationParameters()
-    validation = validate_camera_inputs(
+    validation, dark_reference, _mask = prepare_dark_references(
         dark_frames_dn,
         flat_series,
         parameters,
-        aggregation_block_size=aggregation_block_size,
+        aggregation_block_size,
+        dark_reference_exposure_s,
+        short_dark_exposure_s,
     )
-    if validation.has_errors:
-        raise CameraCharacterizationError(validation)
-    assert dark_frames_dn is not None
     assert flat_series is not None
 
     series_values = tuple(flat_series)
-    dark_statistics = compute_image_stack_statistics(
-        dark_frames_dn,
-        block_size=aggregation_block_size,
-        ddof=1,
-    )
-    dark_mean_dn = dark_statistics.mean_value
-    dark_temporal_variance_dn2 = dark_statistics.mean_variance
-    dark_temporal_noise_dn = math.sqrt(max(dark_temporal_variance_dn2, 0.0))
-    del dark_statistics
+    dark_temporal_noise_dn = math.sqrt(dark_reference.noise_variance_dn2)
 
     flat_mean_dn: list[float] = []
     flat_temporal_variance_dn2: list[float] = []
@@ -120,10 +108,7 @@ def characterize_relative_dn(
         [series.exposure_time_s for series in series_values],
         dtype=float,
     )
-    mean_signal_dn = np.array(
-        [mean_dn - dark_mean_dn for mean_dn in flat_mean_dn],
-        dtype=float,
-    )
+    mean_signal_dn = np.array(flat_mean_dn) - dark_reference.mean_dn_by_level
     temporal_variance_dn2 = np.array(
         flat_temporal_variance_dn2,
         dtype=float,
@@ -182,12 +167,16 @@ def characterize_relative_dn(
         linearity_residuals_dn=_readonly(linearity_residuals_dn),
         linear_fit_slope_dn_per_s=float(linear_fit_slope),
         linear_fit_intercept_dn=float(linear_fit_intercept),
-        dark_mean_dn=dark_mean_dn,
+        dark_mean_dn=dark_reference.noise_mean_dn,
         dark_temporal_noise_dn=dark_temporal_noise_dn,
         maximum_unsaturated_signal_dn=maximum_unsaturated_signal_dn,
         relative_dynamic_range=relative_dynamic_range,
         saturation_onset_exposure_s=saturation_onset_exposure_s,
         saturation_onset_signal_dn=saturation_onset_signal_dn,
+        dark_reference=dark_reference,
+        signal_variance_dn2=_readonly(
+            temporal_variance_dn2 - dark_reference.variance_dn2_by_level
+        ),
     )
 
 

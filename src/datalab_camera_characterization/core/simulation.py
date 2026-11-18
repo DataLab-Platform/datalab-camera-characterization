@@ -12,14 +12,14 @@ import numpy as np
 class CameraSimulationParameters:
     """Physical and acquisition parameters for a synthetic camera series.
 
-    ``conversion_gain_e_per_dn`` is expressed in electrons per digital number.
+    ``conversion_gain_e_per_dn`` is expressed in electrons per ADC step (LSB).
     ``signal_electrons`` is the mean photoelectron count per pixel and frame,
     before applying the static PRNU and illumination gain maps.
     ``prnu_fraction`` is the relative standard deviation of the unit-mean
     sensor gain map, while vignetting and dust shadows define a separate
     unit-mean optical illumination map. ``dsnu_dn`` controls signed pixel
     offsets; row, column, and amplifier-glow parameters add fixed readout
-    structure to the same DN offset map. The requested defective-pixel fraction
+    structure to the same LSB offset map. The requested defective-pixel fraction
     is rounded to the nearest whole pixel, then split as evenly as possible
     between dead and hot pixels.
 
@@ -158,7 +158,7 @@ class CameraSimulationTruth:
 
 @dataclasses.dataclass(frozen=True)
 class CameraSimulationResult:
-    """Synthetic DN frames and the exact ground truth that produced them."""
+    """Synthetic LSB frames and the exact ground truth that produced them."""
 
     parameters: CameraSimulationParameters
     frames_dn: np.ndarray
@@ -276,7 +276,7 @@ def _structured_offset_map(
     parameters: CameraSimulationParameters,
     rng: np.random.Generator,
 ) -> np.ndarray:
-    """Return fixed row/column readout structure and amplifier glow in DN."""
+    """Return fixed row/column readout structure and amplifier glow in LSB."""
     height, width = parameters.shape
     row_pattern = (
         parameters.row_pattern_dn * _unit_deviation_pattern(height, rng)[:, np.newaxis]
@@ -366,7 +366,7 @@ def simulate_camera_frames(
 
     The model applies static PRNU and flat-field illumination to
     photoelectrons, adds dark-current electrons, optional Poisson shot noise
-    and Gaussian read noise, converts to DN, adds the sensor-wide offset and
+    and Gaussian read noise, converts to LSB, adds the sensor-wide offset and
     fixed pixel/row/column/glow structure, applies defective pixels, then clips
     and quantizes to the configured ADC range.
 
