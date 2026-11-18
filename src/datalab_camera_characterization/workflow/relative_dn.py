@@ -1,10 +1,8 @@
-"""Headless relative-DN Camera characterization recipe."""
+"""Headless relative-LSB Camera characterization recipe."""
 
 from __future__ import annotations
 
-import math
 from collections.abc import Sequence
-from numbers import Real
 
 import guidata.dataset as gds
 import numpy as np
@@ -35,27 +33,27 @@ from ..core import (
     compute_image_stack_mean,
     metadata_key,
 )
+from .adc import CameraADCParameters, infer_frame_role
+from .dark_reference import (
+    DARK_REFERENCE_METADATA_KEY,
+    EXPOSURE_TIME_METADATA_KEY,
+    _image_exposure,
+    dark_image_groups,
+    dark_provenance,
+    dark_reference_rows,
+    reference_options,
+    short_bias_item,
+    single_reference_item,
+)
+from .input_checks import prepare_camera_inputs
 
-EXPOSURE_TIME_METADATA_KEY = metadata_key("exposure_time_s")
 FRAME_ROLE_METADATA_KEY = metadata_key("frame_role")
 OUTPUT_ROLE_METADATA_KEY = metadata_key("output_role")
 CANDIDATE_THRESHOLD_METADATA_KEY = metadata_key("candidate_threshold_sigma")
 
 
-def infer_frame_role(image: ImageObj) -> str:
-    """Return ``"dark"`` or ``"flat"`` for one acquisition frame.
-
-    An explicit frame-role metadata value wins; otherwise frames carrying an
-    exposure time are flat frames, as in the original relative-DN convention.
-    """
-    role = image.metadata.get(FRAME_ROLE_METADATA_KEY)
-    if role in ("dark", "flat"):
-        return role
-    return "flat" if EXPOSURE_TIME_METADATA_KEY in image.metadata else "dark"
-
-
-class CameraRecipeParameters(gds.DataSet):
-    """Parameters for relative Camera characterization in DN."""
+class CameraRecipeParameters(CameraADCParameters):
+    """Parameters for relative Camera characterization in LSB."""
 
     minimum_frame_count = gds.IntItem(
         "Minimum frames per series",
@@ -67,11 +65,6 @@ class CameraRecipeParameters(gds.DataSet):
         default=2,
         min=2,
     )
-    saturation_dn = gds.FloatItem(
-        "Saturation level (DN)",
-        default=4_095.0,
-        min=1e-12,
-    )
     saturation_fraction_warning = gds.FloatItem(
         "Saturation warning fraction",
         default=0.01,
@@ -79,7 +72,7 @@ class CameraRecipeParameters(gds.DataSet):
         max=1.0,
     )
     maximum_temporal_variance_dn2 = gds.FloatItem(
-        "Maximum temporal variance warning (DN^2, 0 disables)",
+        "Maximum temporal variance warning (LSB^2, 0 disables)",
         default=0.0,
         min=0.0,
     )
@@ -98,6 +91,8 @@ class CameraRecipeParameters(gds.DataSet):
         default=64,
         min=2,
     )
+    dark_reference_exposure_s = single_reference_item()
+    short_dark_exposure_s = short_bias_item()
 
     def to_validation_parameters(self) -> CameraValidationParameters:
         """Return host-independent validation parameters."""
@@ -129,23 +124,6 @@ def _frame_arrays(
 ) -> tuple[np.ndarray, ...]:
     """Expose frame arrays without materializing a complete 3D stack."""
     return tuple(_image_data(image, slot_name) for image in images)
-
-
-def _image_exposure(image: ImageObj, role: str = "Flat") -> float:
-    """Return one finite non-negative exposure from namespaced metadata."""
-    value = image.metadata.get(EXPOSURE_TIME_METADATA_KEY)
-    if isinstance(value, bool) or not isinstance(value, Real):
-        raise RecipeValidationError(
-            f"{role} image {image.title!r} requires numeric metadata "
-            f"{EXPOSURE_TIME_METADATA_KEY!r}"
-        )
-    exposure_time_s = float(value)
-    if not math.isfinite(exposure_time_s) or exposure_time_s < 0.0:
-        raise RecipeValidationError(
-            f"{role} image {image.title!r} has invalid metadata "
-            f"{EXPOSURE_TIME_METADATA_KEY!r}"
-        )
-    return exposure_time_s
 
 
 def _group_images_by_exposure(
@@ -217,7 +195,9 @@ def _mean_image(
         frames,
         block_size=block_size,
     )
-    return _image_output(template, mean_data, title, role)
+    # Older input files may label one ADC step "DN"; preserve other source units.
+    unit = "LSB" if template.zunit == "DN" else template.zunit
+    return _image_output(template, mean_data, title, role, zunit=unit)
 
 
 def _axis_coordinates(image: ImageObj, axis: int) -> np.ndarray:
@@ -256,23 +236,24 @@ def _metrics_table(
     spatial_result,
     selected_flat_exposure_s: float,
     candidate_threshold_sigma: float,
+    provenance: dict,
 ) -> TableResult:
     """Build a non-normative summary table for the response anchor."""
     fitted_residuals = result.linearity_residuals_dn[result.linear_fit_mask]
     rows: list[list[object]] = [
-        ["Response slope", result.linear_fit_slope_dn_per_s, "DN/s", "Not assessed"],
-        ["Response intercept", result.linear_fit_intercept_dn, "DN", "Not assessed"],
-        ["Dark temporal noise", result.dark_temporal_noise_dn, "DN", "Not assessed"],
+        ["Response slope", result.linear_fit_slope_dn_per_s, "LSB/s", "Not assessed"],
+        ["Response intercept", result.linear_fit_intercept_dn, "LSB", "Not assessed"],
+        ["Dark temporal noise", result.dark_temporal_noise_dn, "LSB", "Not assessed"],
         [
             "Maximum absolute linearity residual",
             float(np.max(np.abs(fitted_residuals))),
-            "DN",
+            "LSB",
             "Not assessed",
         ],
         [
             "Maximum unsaturated signal",
             result.maximum_unsaturated_signal_dn,
-            "DN",
+            "LSB",
             "Not assessed",
         ],
         [
@@ -284,7 +265,7 @@ def _metrics_table(
         [
             "Dark spatial non-uniformity",
             spatial_result.dark_nonuniformity_dn,
-            "DN",
+            "LSB",
             "Not assessed",
         ],
         [
@@ -306,6 +287,7 @@ def _metrics_table(
             "Not assessed",
         ],
         ["Mean flat exposure", selected_flat_exposure_s, "s", "Not assessed"],
+        *dark_reference_rows(result.dark_reference),
     ]
     if result.saturation_onset_exposure_s is not None:
         rows.append(
@@ -327,6 +309,7 @@ def _metrics_table(
             "normative": False,
             "selected_flat_exposure_s": selected_flat_exposure_s,
             "candidate_threshold_sigma": candidate_threshold_sigma,
+            "dark_reference": provenance,
         },
     )
 
@@ -346,13 +329,20 @@ def run_relative_dn_characterization(
         raise RecipeValidationError(
             "Relative Camera characterization requires CameraRecipeParameters"
         )
+    inputs, parameters = prepare_camera_inputs(inputs, parameters, context)
     dark_images = inputs["dark_frames"]
     flat_images = inputs["flat_frames"]
     context.raise_if_cancelled()
     context.report_progress(0.0, "Preparing Camera frame series")
 
-    dark_frames = _frame_arrays(dark_images, "dark_frames")
     flat_series, flat_groups = _group_images_by_exposure(flat_images)
+    options = reference_options(parameters)
+    dark_groups, exposure_source = dark_image_groups(
+        dark_images, options["dark_reference_exposure_s"]
+    )
+    dark_frames = {
+        t: _frame_arrays(group, "dark_frames") for t, group in dark_groups.items()
+    }
     context.report_progress(0.25, "Validating Camera frame series")
     context.raise_if_cancelled()
 
@@ -362,6 +352,7 @@ def run_relative_dn_characterization(
         flat_series,
         parameters.to_validation_parameters(),
         aggregation_block_size=block_size,
+        **options,
     )
     context.report_progress(0.65, "Building Camera outputs")
     context.raise_if_cancelled()
@@ -370,19 +361,33 @@ def run_relative_dn_characterization(
         "Camera response",
         result.exposure_times_s.copy(),
         result.mean_signal_dn.copy(),
-        units=("s", "DN"),
+        units=("s", "LSB"),
         labels=("Exposure time", "Mean signal"),
     )
     response.metadata[OUTPUT_ROLE_METADATA_KEY] = "response"
+    response.metadata.update(parameters.adc_provenance)
+    provenance = dark_provenance(result.dark_reference, exposure_source)
+    response.metadata[DARK_REFERENCE_METADATA_KEY] = provenance
+    response.metadata[metadata_key("flat_temporal_variance_dn2")] = (
+        result.temporal_variance_dn2.tolist()
+    )
+    response.metadata[metadata_key("signal_variance_dn2")] = (
+        result.signal_variance_dn2.tolist()
+    )
 
+    selected_flat_index = int(np.flatnonzero(result.linear_fit_mask)[-1])
+    spatial_dark_s = result.dark_reference.plan.correction_exposures_s[
+        selected_flat_index
+    ]
     mean_dark = _mean_image(
-        dark_images[0],
-        dark_frames,
-        "Mean dark image",
+        dark_groups[spatial_dark_s][0],
+        dark_frames[spatial_dark_s],
+        f"Mean dark image ({spatial_dark_s:g} s)",
         "mean_dark",
         block_size,
     )
-    selected_flat_index = int(np.flatnonzero(result.linear_fit_mask)[-1])
+    mean_dark.metadata[EXPOSURE_TIME_METADATA_KEY] = spatial_dark_s
+    mean_dark.metadata[metadata_key("frame_count")] = len(dark_frames[spatial_dark_s])
     selected_flat_series = flat_series[selected_flat_index]
     selected_flat_images = flat_groups[selected_flat_index]
     mean_flat = _mean_image(
@@ -412,7 +417,7 @@ def run_relative_dn_characterization(
         spatial_result.dsnu_like_map_dn,
         "Relative DSNU-like map",
         "dsnu_like_map",
-        zunit="DN",
+        zunit="LSB",
         zlabel="Dark offset",
     )
     prnu_like_map = _image_output(
@@ -434,6 +439,11 @@ def run_relative_dn_characterization(
     candidate_pixel_map.metadata[CANDIDATE_THRESHOLD_METADATA_KEY] = float(
         parameters.candidate_threshold_sigma
     )
+    for image in (dsnu_like_map, prnu_like_map, candidate_pixel_map):
+        image.metadata[metadata_key("spatial_dark_exposure_s")] = spatial_dark_s
+        image.metadata[metadata_key("spatial_flat_exposure_s")] = (
+            selected_flat_series.exposure_time_s
+        )
 
     prnu_row_profile = _signal_output(
         "PRNU-like row profile",
@@ -456,7 +466,7 @@ def run_relative_dn_characterization(
         _histogram_centers(spatial_result.dsnu_histogram_bin_edges_dn),
         spatial_result.dsnu_histogram_counts,
         "dsnu_distribution",
-        units=("DN", ""),
+        units=("LSB", ""),
         labels=("Dark offset", "Pixel count"),
     )
     prnu_distribution = _signal_output(
@@ -482,6 +492,7 @@ def run_relative_dn_characterization(
         spatial_result,
         selected_flat_series.exposure_time_s,
         float(parameters.candidate_threshold_sigma),
+        provenance,
     )
     context.report_progress(1.0, "Camera characterization complete")
     return RecipeOutcome(

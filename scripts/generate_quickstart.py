@@ -17,7 +17,7 @@ from datalab_camera_characterization.core import (
     metadata_key,
     simulate_camera_frames,
 )
-from datalab_camera_characterization.workflow import EXPOSURE_TIME_METADATA_KEY
+from datalab_camera_characterization.demo import tag_simulated_frame
 
 OUTPUT_FILE = (
     Path(__file__).parents[1]
@@ -85,18 +85,13 @@ def _simulate_series(
             "uuid",
             _stable_uuid(f"image/{title_prefix.casefold()}/{index}"),
         )
-        image.metadata[metadata_key("synthetic")] = True
-        image.metadata[metadata_key("simulation_seed")] = SIMULATION_SEED
+        tag_simulated_frame(image, parameters, "flat" if signal_electrons else "dark")
         image.metadata[metadata_key("signal_electrons")] = signal_electrons
-        image.metadata[metadata_key("frame_role")] = (
-            "dark" if signal_electrons == 0.0 else "flat"
-        )
         image.metadata[metadata_key("sensor_structure")] = (
             "bias, pixel DSNU, row/column fixed pattern, amplifier glow, "
             "read noise, dead/hot pixels"
         )
         if signal_electrons > 0.0:
-            image.metadata[EXPOSURE_TIME_METADATA_KEY] = exposure_time_s
             image.metadata[metadata_key("illumination_structure")] = (
                 "uniform field with vignetting and dust shadows"
             )

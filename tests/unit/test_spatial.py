@@ -9,7 +9,7 @@ from datalab_camera_characterization.core import characterize_spatial_dn
 
 
 def test_spatial_characterization_has_explicit_relative_definitions() -> None:
-    """Maps, profiles, histograms, and candidates follow the DN contract."""
+    """Maps, profiles, histograms, and candidates follow the LSB contract."""
     mean_dark = np.array(((8.0, 10.0), (10.0, 12.0)))
     mean_flat = np.array(((28.0, 30.0), (50.0, 52.0)))
 

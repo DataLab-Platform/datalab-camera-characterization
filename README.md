@@ -12,8 +12,8 @@ Each method comes with a demonstration campaign.
 
 | Method | Question | Guide |
 | --- | --- | --- |
-| Relative camera characterization | How do response, temporal noise and spatial non-uniformity behave, in DN? | [Relative characterization](doc/relative-dn.md) |
-| Photon transfer curve | What are the conversion gain (e⁻/DN), read noise, saturation capacity and dynamic range? | [Photon transfer](doc/photon-transfer.md) |
+| Relative camera characterization | How do response, temporal noise and spatial non-uniformity behave, in LSB? | [Relative characterization](doc/relative-dn.md) |
+| Photon transfer curve | What are the conversion gain (e⁻/LSB), read noise, saturation capacity and dynamic range? | [Photon transfer](doc/photon-transfer.md) |
 | Dark current and hot pixels | How much dark current does each pixel generate, and which pixels are hot? | [Dark current](doc/dark-current.md) |
 
 ## Installation
