@@ -48,7 +48,7 @@ class DarkCurrentRecipeParameters(gds.DataSet):
         min=2,
     )
     saturation_dn = gds.FloatItem(
-        "Saturation level (DN)",
+        "Saturation level (LSB)",
         default=4_095.0,
         min=1e-12,
     )
@@ -59,7 +59,7 @@ class DarkCurrentRecipeParameters(gds.DataSet):
         max=1.0,
     )
     conversion_gain_e_per_dn = gds.FloatItem(
-        "Conversion gain (e-/DN, 0 keeps DN units)",
+        "Conversion gain (e-/LSB, 0 keeps LSB units)",
         default=0.0,
         min=0.0,
     )
@@ -103,7 +103,7 @@ class DarkCurrentRecipeParameters(gds.DataSet):
 def _rate_unit(result: DarkCurrentCharacterization) -> tuple[float, str]:
     """Return the factor and unit used for dark-current outputs."""
     if result.conversion_gain_e_per_dn is None:
-        return 1.0, "DN/s"
+        return 1.0, "LSB/s"
     return result.conversion_gain_e_per_dn, "e-/s"
 
 
@@ -137,7 +137,7 @@ def _metrics_table(result: DarkCurrentCharacterization) -> TableResult:
             "%",
             "Not assessed",
         ],
-        ["Dark offset", result.offset_dn, "DN", "Not assessed"],
+        ["Dark offset", result.offset_dn, "LSB", "Not assessed"],
         ["Dark ramp fit R^2", result.fit_r_squared, "", "Not assessed"],
         ["Hot pixels", result.hot_pixel_count, "pixel", "Not assessed"],
         [
@@ -150,7 +150,7 @@ def _metrics_table(result: DarkCurrentCharacterization) -> TableResult:
         [
             "Conversion gain from dark shot noise",
             result.conversion_gain_from_dark_e_per_dn,
-            "e-/DN",
+            "e-/LSB",
             "Indicative",
         ],
         ["Exposure levels", int(result.exposure_times_s.size), "", ""],
@@ -219,7 +219,7 @@ def run_dark_current_characterization(
         result.exposure_times_s.copy(),
         result.mean_dark_dn.copy(),
         "dark_ramp",
-        units=("s", "DN"),
+        units=("s", "LSB"),
         labels=("Exposure time", "Mean dark signal"),
     )
     dark_variance_ramp = _signal_output(
@@ -227,7 +227,7 @@ def run_dark_current_characterization(
         result.exposure_times_s.copy(),
         result.temporal_variance_dn2.copy(),
         "dark_variance_ramp",
-        units=("s", "DN^2"),
+        units=("s", "LSB^2"),
         labels=("Exposure time", "Temporal variance"),
     )
     dark_current_map = _image_output(
@@ -243,7 +243,7 @@ def run_dark_current_characterization(
         result.offset_map_dn.copy(),
         "Dark offset map",
         "offset_map",
-        zunit="DN",
+        zunit="LSB",
         zlabel="Offset",
     )
     pixel_classes = np.full(result.hot_pixel_mask.shape, REGULAR_PIXEL, np.uint8)

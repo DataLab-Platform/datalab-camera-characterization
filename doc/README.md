@@ -7,7 +7,7 @@
 
 Methods:
 
-- [Relative characterization in DN](relative-dn.md): response, temporal noise and spatial non-uniformity, in DN.
+- [Relative characterization in LSB](relative-dn.md): response, temporal noise and spatial non-uniformity, in LSB.
 - [Photon transfer curve](photon-transfer.md): conversion gain, read noise, saturation capacity and dynamic range.
 - [Dark current and hot pixels](dark-current.md): dark-current map, non-uniformity and hot pixels from a dark ramp.
 

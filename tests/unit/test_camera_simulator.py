@@ -81,7 +81,7 @@ def test_single_acquisition_adds_dark_and_flat_frames() -> None:
 
 
 def test_photon_transfer_sequence_is_ready_for_the_camera_methods() -> None:
-    """A flat exposure ladder with darks suits the PTC and relative-DN methods."""
+    """A flat exposure ladder with darks suits the PTC and relative-LSB methods."""
     camera = CameraSimulator()
     camera.settings.mode = "sequence"
     images = camera.acquire().objects

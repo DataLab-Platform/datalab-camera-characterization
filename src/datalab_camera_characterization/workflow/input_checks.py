@@ -38,7 +38,7 @@ def suggest_dark_ramp_bindings(
 ) -> dict[str, tuple[ImageObj, ...]]:
     """Assign every frame not explicitly tagged as flat to the dark ramp.
 
-    Dark-ramp frames carry an exposure time, so the relative-DN convention
+    Dark-ramp frames carry an exposure time, so the relative-LSB convention
     (frames with an exposure time are flat) does not apply here.
     """
     return {
@@ -137,7 +137,7 @@ def _check_dark_flat(
 def check_relative_dn_inputs(
     inputs: RecipeInputs, parameters: gds.DataSet | None
 ) -> list[RecipeDiagnostic]:
-    """Check dark frames and the flat exposure ladder of relative DN."""
+    """Check dark frames and the flat exposure ladder of relative LSB."""
     if not isinstance(parameters, CameraRecipeParameters):
         parameters = CameraRecipeParameters()
     return _check_dark_flat(

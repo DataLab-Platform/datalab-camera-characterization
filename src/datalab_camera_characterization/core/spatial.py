@@ -1,4 +1,4 @@
-"""Non-normative relative spatial Camera characterization in DN."""
+"""Non-normative relative spatial Camera characterization in LSB."""
 
 from __future__ import annotations
 
@@ -81,7 +81,7 @@ def characterize_spatial_dn(
 ) -> RelativeSpatialCharacterization:
     """Compute relative spatial maps from dark and illuminated mean images.
 
-    The DSNU-like map is the centered mean dark image in DN. The PRNU-like
+    The DSNU-like map is the centered mean dark image in LSB. The PRNU-like
     map is the dark-corrected mean flat image divided by its spatial mean,
     minus one. These relative definitions are non-normative and make no EMVA
     compliance claim.

@@ -4,13 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+Camera settings, axes and result tables now use LSB (one ADC step) instead of DN. Numeric values, recipe IDs and saved parameter names are unchanged.
+
 Python 3.10 or later is required.
 
 First version of the Camera & Detector Characterization plugin.
 
 Methods:
 
-- Relative characterization in DN: response curve, temporal noise, linearity, saturation onset, dynamic range, DSNU-like and PRNU-like maps, candidate pixels, profiles and distributions, with a metrics table.
+- Relative characterization in LSB: response curve, temporal noise, linearity, saturation onset, dynamic range, DSNU-like and PRNU-like maps, candidate pixels, profiles and distributions, with a metrics table.
 - Photon transfer curve: conversion gain, read noise, saturation capacity, dynamic range and SNR.
 - Dark current and hot pixels: dark-current and offset maps, non-uniformity, hot pixels and an indicative gain, from a dark ramp.
 - Input checks before every run, with clear diagnostics. Frames are assigned to the dark or flat slots from their exposure time and optional frame role.

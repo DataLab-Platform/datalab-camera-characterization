@@ -23,7 +23,7 @@ Open it from the **Tools** section of the Camera page of the **Applications** ca
 | Sensor | Frame size, ADC resolution, conversion gain, read noise, offset, PRNU, DSNU, row and column patterns, defective pixels, serial number |
 | Dark current | Dark current, its non-uniformity, hot pixels, amplifier glow |
 
-- The ADC saturates at 2^bits − 1 DN. The view uses this full range: the image gets brighter with the exposure.
+- The ADC saturates at 2^bits − 1 LSB. The view uses this full range: the image gets brighter with the exposure.
 - The serial number seeds the sensor. PRNU, DSNU, defects and hot pixels stay the same between acquisitions, as on a real camera. Each frame draws new temporal noise.
 - One acquisition holds at most 20 megapixels, all frames together, to fit in the browser memory of DataLab-Web.
 
@@ -42,7 +42,7 @@ Frames are named like `Dark 136 ms 01` or `Flat 10 ms 02`. They carry these meta
 
 ## Model
 
-For each pixel, the simulator draws the collected electrons from a Poisson law, adds Gaussian read noise, then converts to DN:
+For each pixel, the simulator draws the collected electrons from a Poisson law, adds Gaussian read noise, then converts to LSB:
 
 ```text
 expected_electrons = signal_electrons * prnu_gain * illumination_gain + dark_current_e_per_s * exposure_time_s
@@ -55,7 +55,7 @@ Dead pixels are then set to 0 and hot pixels to saturation. The result is clippe
 | --- | --- |
 | PRNU | Lognormal gain map with a mean of 1 |
 | Illumination | Map with a mean of 1: radial vignetting and soft dust shadows, kept apart from PRNU in the truth |
-| Fixed offset | Pixel DSNU, row and column patterns, amplifier glow in DN in the lower-right corner |
+| Fixed offset | Pixel DSNU, row and column patterns, amplifier glow in LSB in the lower-right corner |
 | Dark current | Optional non-uniformity, dark hot pixels, and amplifier glow in e⁻/s that grows with the exposure |
 | Defects | Dead and hot pixels, in equal numbers |
 

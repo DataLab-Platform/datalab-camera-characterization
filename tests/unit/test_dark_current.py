@@ -100,7 +100,10 @@ def test_dark_current_parameters_are_validated(kwargs: dict) -> None:
         DarkCurrentParameters(**kwargs)
 
 
-def test_dark_current_recipe_builds_maps_and_anchored_table() -> None:
+@pytest.mark.parametrize(("gain", "rate_unit"), [(2.0, "e-/s"), (0.0, "LSB/s")])
+def test_dark_current_recipe_builds_maps_and_anchored_table(
+    gain: float, rate_unit: str
+) -> None:
     """The recipe returns ramps, maps, histogram and an anchored table."""
     series, truth = _series()
     images = []
@@ -110,7 +113,7 @@ def test_dark_current_recipe_builds_maps_and_anchored_table() -> None:
             image.metadata[EXPOSURE_TIME_METADATA_KEY] = item.exposure_time_s
             images.append(image)
     parameters = DarkCurrentRecipeParameters()
-    parameters.conversion_gain_e_per_dn = 2.0
+    parameters.conversion_gain_e_per_dn = gain
 
     outcome = DARK_CURRENT_RECIPE.run(
         {"dark_frames": tuple(images)},
@@ -127,14 +130,17 @@ def test_dark_current_recipe_builds_maps_and_anchored_table() -> None:
         "hot_pixel_map",
         "dark_current_distribution",
     ]
-    assert outputs["dark_current_map"].zunit == "e-/s"
+    assert outputs["dark_current_map"].zunit == rate_unit
+    assert outputs["dark_ramp"].yunit == "LSB"
+    assert outputs["dark_variance_ramp"].yunit == "LSB^2"
+    assert outputs["offset_map"].zunit == "LSB"
     assert np.count_nonzero(outputs["hot_pixel_map"].data == 1) == np.count_nonzero(
         truth.dark_hot_pixel_mask
     )
     (metrics,) = outcome.results
     assert metrics.anchor_id == "dark_ramp"
     rows = {row[0]: row for row in metrics.value.data}
-    assert rows["Mean dark current"][2] == "e-/s"
+    assert rows["Mean dark current"][2] == rate_unit
 
 
 def test_dark_current_recipe_requires_exposure_metadata() -> None:

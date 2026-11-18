@@ -34,7 +34,7 @@ CAMERA_QUICKSTART = PluginExample(
     id="quickstart",
     title="Synthetic camera characterization",
     resource=("datalab_camera_characterization:examples/camera_quickstart.h5"),
-    description="Physically structured dark and flat frames for relative-DN analysis.",
+    description="Physically structured dark and flat frames for relative-LSB analysis.",
     recipe_ids=(RELATIVE_DN_RECIPE.recipe_id,),
 )
 

@@ -1,4 +1,4 @@
-"""Tests for relative Camera characterization in DN."""
+"""Tests for relative Camera characterization in LSB."""
 
 import math
 
@@ -14,7 +14,7 @@ from datalab_camera_characterization.core import (
 
 
 def _two_frame_stack(mean_dn: int, shape: tuple[int, int] = (2, 3)) -> np.ndarray:
-    """Return integer frames with exact mean and sample variance of two DN2."""
+    """Return integer frames with exact mean and sample variance of two LSB2."""
     return np.stack(
         (
             np.full(shape, mean_dn - 1, dtype=np.uint16),

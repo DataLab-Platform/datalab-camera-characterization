@@ -32,8 +32,8 @@ MAD_TO_SIGMA = 1.4826
 class DarkCurrentParameters:
     """Explicit, non-normative settings for the dark-ramp method.
 
-    ``conversion_gain_e_per_dn`` converts DN/s into e-/s when known, for
-    instance from a photon transfer measurement; ``None`` keeps DN units.
+    ``conversion_gain_e_per_dn`` converts LSB/s into e-/s when known, for
+    instance from a photon transfer measurement; ``None`` keeps LSB units.
     Hot pixels are isolated pixels whose dark current exceeds the local
     background (median filter of ``background_window`` pixels) by more than
     ``hot_pixel_threshold_sigma`` robust standard deviations, so that smooth
@@ -76,7 +76,7 @@ class DarkCurrentParameters:
 
 @dataclasses.dataclass(frozen=True)
 class DarkCurrentCharacterization:
-    """Dark-ramp results in DN; electron values require a conversion gain.
+    """Dark-ramp results in LSB; electron values require a conversion gain.
 
     Spatial means and the variance ramp use regular pixels only: pixels that
     are not stuck, not hot and unsaturated at every exposure. The indicative
@@ -114,7 +114,7 @@ class DarkCurrentCharacterization:
         return int(np.count_nonzero(self.stuck_pixel_mask))
 
     def to_electrons(self, value_dn: float) -> float | None:
-        """Convert one DN-based value with the configured gain, if any."""
+        """Convert one LSB-based value with the configured gain, if any."""
         if self.conversion_gain_e_per_dn is None:
             return None
         return value_dn * self.conversion_gain_e_per_dn

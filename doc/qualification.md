@@ -11,7 +11,7 @@ The plugin is **Alpha**: it is validated on synthetic data with known truth, in 
 For the relative characterization, one sensor of 64 × 64 pixels gives one dark series and six flat levels of 24 frames. The test requires:
 
 - response slope within 0.5 %, dark temporal noise within 2 %;
-- fitted means within 0.5 % and 0.2 DN, fit residuals below 0.2 DN;
+- fitted means within 0.5 % and 0.2 LSB, fit residuals below 0.2 LSB;
 - the last, deliberately clipped level excluded from the fit and found as the saturation onset.
 
 The expected values come from the simulator settings and its exact PRNU map:
@@ -58,7 +58,7 @@ python -m scripts.check_stable_gate [path/to/stable-evidence.json]
 
 The gate checks an evidence bundle, then runs the Alpha gate. The default manifest is `qualification/stable-evidence.json`. It does not exist yet, so the command exits with `manifest-not-found` and the project stays Alpha.
 
-The manifest (`schema_version` 1) is bound to plugin 0.1.0 and relative-DN recipe 1.1.0. It references four artifacts by a path relative to the manifest and the SHA-256 of the reviewed bytes: the real camera campaign, the acquisition protocol, the validation report and the independent review. Paths must stay inside the manifest folder and have no other hard links. Angle-bracket values and hashes below are placeholders:
+The manifest (`schema_version` 1) is bound to plugin 0.1.0 and relative-LSB recipe 1.1.0. It references four artifacts by a path relative to the manifest and the SHA-256 of the reviewed bytes: the real camera campaign, the acquisition protocol, the validation report and the independent review. Paths must stay inside the manifest folder and have no other hard links. Angle-bracket values and hashes below are placeholders:
 
 ```json
 {
@@ -121,12 +121,12 @@ Version 0.2.0 was verified for this historical matrix:
 | DataLab-Web | 0.9.0 |
 | Pyodide | 0.26.4 |
 | Camera plugin | 0.2.0 |
-| Relative-DN recipe | 1.1.0 |
+| Relative-LSB recipe | 1.1.0 |
 | Photon transfer and dark-current recipes | 1.0.0 |
 
 The 0.2.1 candidate was prequalified with the DataLab-Web 0.11.0 candidate and Pyodide 0.26.4 in Chromium, so its Web manifest reports `verified` for that combination. The final gate must be repeated with the exact official release wheel before DataLab-Web is released.
 
-DataLab-Web's `tests/e2e/application_methods.spec.ts` opens each example through its deep link, runs its method from the **Applications** dialog and checks the outputs in the object tree. For the relative-DN quickstart, a Playwright gate also requires:
+DataLab-Web's `tests/e2e/application_methods.spec.ts` opens each example through its deep link, runs its method from the **Applications** dialog and checks the outputs in the object tree. For the relative-LSB quickstart, a Playwright gate also requires:
 
 - a visible **Camera response** curve, a non-blank **Relative PRNU-like map** and the metrics table;
 - the removal of every object of a partial commit after an injected failure;

@@ -1,4 +1,4 @@
-"""Tests for the headless relative-DN Camera recipe."""
+"""Tests for the headless relative-LSB Camera recipe."""
 
 from __future__ import annotations
 
@@ -85,6 +85,7 @@ def test_relative_dn_recipe_builds_anchored_cross_panel_outcome(
     ]
     response = outcome.objects[0].value
     assert isinstance(response, SignalObj)
+    assert response.yunit == "LSB"
     np.testing.assert_array_equal(response.x, (1.0, 2.0, 3.0))
     np.testing.assert_array_equal(response.y, (20.0, 40.0, 60.0))
     assert response.metadata[OUTPUT_ROLE_METADATA_KEY] == "response"
@@ -114,8 +115,9 @@ def test_relative_dn_recipe_builds_anchored_cross_panel_outcome(
     assert (mean_flat.xunit, mean_flat.yunit, mean_flat.zunit) == (
         "mm",
         "mm",
-        "DN",
+        "LSB",
     )
+    assert all(image.zunit == "DN" for image in (*dark, *flats))
 
     outputs = {output.id: output.value for output in outcome.objects}
     dsnu_like_map = outputs["dsnu_like_map"]

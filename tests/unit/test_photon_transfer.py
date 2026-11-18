@@ -62,7 +62,7 @@ def test_photon_transfer_recovers_gain_and_read_noise() -> None:
     result = characterize_photon_transfer(dark, flats)
 
     assert result.conversion_gain_e_per_dn == pytest.approx(GAIN_E_PER_DN, rel=0.05)
-    # Quantization adds 1/12 DN^2 to the electronic read noise.
+    # Quantization adds 1/12 LSB^2 to the electronic read noise.
     expected_read_noise = GAIN_E_PER_DN * np.sqrt(
         (READ_NOISE_E / GAIN_E_PER_DN) ** 2 + 1.0 / 12.0
     )

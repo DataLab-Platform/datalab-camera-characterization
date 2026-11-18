@@ -1,4 +1,4 @@
-"""Headless relative-DN Camera characterization recipe."""
+"""Headless relative-LSB Camera characterization recipe."""
 
 from __future__ import annotations
 
@@ -46,7 +46,7 @@ def infer_frame_role(image: ImageObj) -> str:
     """Return ``"dark"`` or ``"flat"`` for one acquisition frame.
 
     An explicit frame-role metadata value wins; otherwise frames carrying an
-    exposure time are flat frames, as in the original relative-DN convention.
+    exposure time are flat frames, as in the original relative-LSB convention.
     """
     role = image.metadata.get(FRAME_ROLE_METADATA_KEY)
     if role in ("dark", "flat"):
@@ -55,7 +55,7 @@ def infer_frame_role(image: ImageObj) -> str:
 
 
 class CameraRecipeParameters(gds.DataSet):
-    """Parameters for relative Camera characterization in DN."""
+    """Parameters for relative Camera characterization in LSB."""
 
     minimum_frame_count = gds.IntItem(
         "Minimum frames per series",
@@ -68,7 +68,7 @@ class CameraRecipeParameters(gds.DataSet):
         min=2,
     )
     saturation_dn = gds.FloatItem(
-        "Saturation level (DN)",
+        "Saturation level (LSB)",
         default=4_095.0,
         min=1e-12,
     )
@@ -79,7 +79,7 @@ class CameraRecipeParameters(gds.DataSet):
         max=1.0,
     )
     maximum_temporal_variance_dn2 = gds.FloatItem(
-        "Maximum temporal variance warning (DN^2, 0 disables)",
+        "Maximum temporal variance warning (LSB^2, 0 disables)",
         default=0.0,
         min=0.0,
     )
@@ -217,7 +217,9 @@ def _mean_image(
         frames,
         block_size=block_size,
     )
-    return _image_output(template, mean_data, title, role)
+    # Older input files may label one ADC step "DN"; preserve other source units.
+    unit = "LSB" if template.zunit == "DN" else template.zunit
+    return _image_output(template, mean_data, title, role, zunit=unit)
 
 
 def _axis_coordinates(image: ImageObj, axis: int) -> np.ndarray:
@@ -260,19 +262,19 @@ def _metrics_table(
     """Build a non-normative summary table for the response anchor."""
     fitted_residuals = result.linearity_residuals_dn[result.linear_fit_mask]
     rows: list[list[object]] = [
-        ["Response slope", result.linear_fit_slope_dn_per_s, "DN/s", "Not assessed"],
-        ["Response intercept", result.linear_fit_intercept_dn, "DN", "Not assessed"],
-        ["Dark temporal noise", result.dark_temporal_noise_dn, "DN", "Not assessed"],
+        ["Response slope", result.linear_fit_slope_dn_per_s, "LSB/s", "Not assessed"],
+        ["Response intercept", result.linear_fit_intercept_dn, "LSB", "Not assessed"],
+        ["Dark temporal noise", result.dark_temporal_noise_dn, "LSB", "Not assessed"],
         [
             "Maximum absolute linearity residual",
             float(np.max(np.abs(fitted_residuals))),
-            "DN",
+            "LSB",
             "Not assessed",
         ],
         [
             "Maximum unsaturated signal",
             result.maximum_unsaturated_signal_dn,
-            "DN",
+            "LSB",
             "Not assessed",
         ],
         [
@@ -284,7 +286,7 @@ def _metrics_table(
         [
             "Dark spatial non-uniformity",
             spatial_result.dark_nonuniformity_dn,
-            "DN",
+            "LSB",
             "Not assessed",
         ],
         [
@@ -370,7 +372,7 @@ def run_relative_dn_characterization(
         "Camera response",
         result.exposure_times_s.copy(),
         result.mean_signal_dn.copy(),
-        units=("s", "DN"),
+        units=("s", "LSB"),
         labels=("Exposure time", "Mean signal"),
     )
     response.metadata[OUTPUT_ROLE_METADATA_KEY] = "response"
@@ -412,7 +414,7 @@ def run_relative_dn_characterization(
         spatial_result.dsnu_like_map_dn,
         "Relative DSNU-like map",
         "dsnu_like_map",
-        zunit="DN",
+        zunit="LSB",
         zlabel="Dark offset",
     )
     prnu_like_map = _image_output(
@@ -456,7 +458,7 @@ def run_relative_dn_characterization(
         _histogram_centers(spatial_result.dsnu_histogram_bin_edges_dn),
         spatial_result.dsnu_histogram_counts,
         "dsnu_distribution",
-        units=("DN", ""),
+        units=("LSB", ""),
         labels=("Dark offset", "Pixel count"),
     )
     prnu_distribution = _signal_output(

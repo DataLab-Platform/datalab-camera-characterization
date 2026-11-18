@@ -41,7 +41,7 @@ FRAME_ROLE_HINT = RecipeMetadataRequirement(
 
 
 def _dark_frames_slot() -> RecipeInputSlot:
-    """Return the dark-frame slot shared by relative DN and photon transfer."""
+    """Return the dark-frame slot shared by relative LSB and photon transfer."""
     return RecipeInputSlot(
         "dark_frames",
         RecipeObjectType.IMAGE,
@@ -76,7 +76,7 @@ RELATIVE_DN_RECIPE = RecipeDescriptor(
     version="1.1.0",
     description=(
         "Characterize dark and uniform-illumination image series with relative "
-        "temporal and spatial metrics in digital numbers."
+        "temporal and spatial metrics in ADC counts (LSB)."
     ),
     inputs=(
         _dark_frames_slot(),

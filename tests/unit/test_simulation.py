@@ -44,7 +44,7 @@ def test_simulation_is_reproducible_and_read_only() -> None:
 
 
 def test_noiseless_model_converts_electrons_to_dn() -> None:
-    """Photocharge and dark current use the documented electrons-per-DN gain."""
+    """Photocharge and dark current use the documented electrons-per-LSB gain."""
     parameters = CameraSimulationParameters(
         shape=(2, 3),
         frame_count=2,
@@ -243,7 +243,7 @@ def test_prnu_map_is_positive_with_requested_relative_deviation() -> None:
 
 
 def test_shot_noise_has_poisson_mean_and_variance() -> None:
-    """Quantized frames retain Poisson statistics when gain is one e-/DN."""
+    """Quantized frames retain Poisson statistics when gain is one e-/LSB."""
     parameters = CameraSimulationParameters(
         shape=(1, 1),
         frame_count=100_000,

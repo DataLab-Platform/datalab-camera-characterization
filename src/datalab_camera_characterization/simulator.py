@@ -97,16 +97,16 @@ class CameraSimulatorSettings(gds.DataSet):
     height = gds.IntItem("Height", default=96, min=8, max=2048, unit="px")
     bit_depth = gds.IntItem("ADC resolution", default=12, min=8, max=16, unit="bits")
     conversion_gain = gds.FloatItem(
-        "Conversion gain", default=2.0, min=0.01, max=1_000.0, unit="e⁻/DN"
+        "Conversion gain", default=2.0, min=0.01, max=1_000.0, unit="e⁻/LSB"
     )
     read_noise = gds.FloatItem(
         "Read noise", default=3.0, min=0.0, max=1_000.0, unit="e⁻"
     )
-    offset = gds.FloatItem("Offset", default=100.0, min=0.0, unit="DN")
+    offset = gds.FloatItem("Offset", default=100.0, min=0.0, unit="LSB")
     prnu_percent = gds.FloatItem("PRNU", default=1.0, min=0.0, max=99.0, unit="%")
-    dsnu = gds.FloatItem("DSNU", default=1.0, min=0.0, unit="DN")
-    row_pattern = gds.FloatItem("Row pattern", default=3.0, min=0.0, unit="DN")
-    column_pattern = gds.FloatItem("Column pattern", default=2.0, min=0.0, unit="DN")
+    dsnu = gds.FloatItem("DSNU", default=1.0, min=0.0, unit="LSB")
+    row_pattern = gds.FloatItem("Row pattern", default=3.0, min=0.0, unit="LSB")
+    column_pattern = gds.FloatItem("Column pattern", default=2.0, min=0.0, unit="LSB")
     defective_percent = gds.FloatItem(
         "Defective pixels", default=0.1, min=0.0, max=100.0, unit="%"
     )
@@ -239,8 +239,8 @@ class CameraSimulator(PluginInstrument):
         image = create_image(f"{role} {exposure_ms:g} ms", frame.copy())
         saturated = 100.0 * np.count_nonzero(frame >= self.saturation_dn) / frame.size
         summary = (
-            f"{role} frame, {exposure_ms:g} ms: mean {np.mean(frame):.1f} DN, "
-            f"standard deviation {np.std(frame):.1f} DN, "
+            f"{role} frame, {exposure_ms:g} ms: mean {np.mean(frame):.1f} LSB, "
+            f"standard deviation {np.std(frame):.1f} LSB, "
             f"{saturated:.2f} % saturated pixels"
         )
         return InstrumentFrame((image,), summary, (0.0, float(self.saturation_dn)))

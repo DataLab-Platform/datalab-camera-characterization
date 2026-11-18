@@ -1,8 +1,8 @@
-# Relative Characterization in DN
+# Relative Characterization in LSB
 
 [← Documentation index](README.md)
 
-This method describes how the response, the temporal noise and the spatial non-uniformity of a camera behave, from dark and flat frames. Results stay in digital numbers (DN): the method estimates no conversion gain, quantum efficiency or radiometric quantity. For the conversion gain, use the [photon transfer curve](photon-transfer.md).
+This method describes the response, temporal noise and spatial non-uniformity of a camera from dark and flat frames. One LSB (least significant bit) is one step on the camera’s digital output scale. The method estimates no conversion gain, quantum efficiency or radiometric quantity. For the conversion gain, use the [photon transfer curve](photon-transfer.md).
 
 Recipe: `org.datalab.camera-characterization:relative-dn-characterization`, version 1.1.0.
 
@@ -32,7 +32,7 @@ The inputs are checked before the computation. Errors stop the run. Warnings, su
 | `response` | Signal | Mean dark-subtracted signal versus exposure, with the metrics table |
 | `mean_dark` | Image | Mean of all dark frames |
 | `mean_flat` | Image | Mean of the highest level kept by the linear fit |
-| `dsnu_like_map` | Image | Centered mean dark image, in DN |
+| `dsnu_like_map` | Image | Centered mean dark image, in LSB |
 | `prnu_like_map` | Image | Relative deviation of the dark-corrected flat image |
 | `candidate_pixel_map` | Image | Pixels beyond the threshold in either map |
 | `prnu_row_profile`, `prnu_column_profile` | Signal | Row and column means of the PRNU-like map |
@@ -61,11 +61,11 @@ A negative mean signal is kept, not clipped: it points to a problem in the data.
 
 ## Demonstration
 
-The [quickstart](getting-started.md#run-the-quickstart) campaign shows every output. A separate synthetic campaign checks the method against the simulator truth: response slope within 0.5 %, dark noise within 2 % and fit residuals below 0.2 DN. A noiseless campaign checks the DSNU-like and PRNU-like maps against the truth maps. See [Qualification](qualification.md).
+The [quickstart](getting-started.md#run-the-quickstart) campaign shows every output. A separate synthetic campaign checks the method against the simulator truth: response slope within 0.5 %, dark noise within 2 % and fit residuals below 0.2 LSB. A noiseless campaign checks the DSNU-like and PRNU-like maps against the truth maps. See [Qualification](qualification.md).
 
 ## Limits
 
-- Results are relative quantities in DN. The method does not claim EMVA 1288 compliance.
+- Results are relative quantities in LSB. The method does not claim EMVA 1288 compliance.
 - The PRNU-like map includes vignetting and dust: from frames alone, sensor PRNU and illumination cannot be separated.
 
 ## Python

@@ -79,9 +79,12 @@ def test_photon_transfer_demo_recovers_sensor_truth() -> None:
     gain = demo.CONVERSION_GAIN_E_PER_DN
     adc_limit_e = gain * (4_095.0 - 100.0)
 
+    outputs = {output.id: output.value for output in outcome.objects}
+    assert (outputs["ptc"].xunit, outputs["ptc"].yunit) == ("LSB", "LSB^2")
+    assert rows["Conversion gain"][2] == "e-/LSB"
     assert len(inputs["dark_frames"]) == demo.PHOTON_TRANSFER_DARK_FRAMES
     assert rows["Conversion gain"][1] == pytest.approx(gain, rel=0.03)
-    # Electronic read noise of 3 e- plus 1/12 DN^2 of ADC quantization.
+    # Electronic read noise of 3 e- plus 1/12 LSB^2 of ADC quantization.
     assert rows["Read noise"][1] == pytest.approx(
         gain * np.sqrt((3.0 / gain) ** 2 + 1.0 / 12.0), rel=0.1
     )

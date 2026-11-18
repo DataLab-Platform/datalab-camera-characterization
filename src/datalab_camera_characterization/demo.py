@@ -57,7 +57,7 @@ PHOTON_TRANSFER_DEMO = PluginExample(
     title="Synthetic photon transfer ladder",
     description=(
         "Uniformly illuminated frames from 1 ms to 140 ms, two per level, up to "
-        "ADC saturation (2 e-/DN, 3 e- read noise)."
+        "ADC saturation (2 e-/LSB, 3 e- read noise)."
     ),
     # Like EMVA 1288, one exposure ladder gives both the PTC and the linearity
     recipe_ids=(PHOTON_TRANSFER_RECIPE.recipe_id, RELATIVE_DN_RECIPE.recipe_id),

@@ -40,7 +40,7 @@ class PhotonTransferRecipeParameters(gds.DataSet):
         min=2,
     )
     saturation_dn = gds.FloatItem(
-        "Saturation level (DN)",
+        "Saturation level (LSB)",
         default=4_095.0,
         min=1e-12,
     )
@@ -93,20 +93,20 @@ def _metrics_table(result: PhotonTransferCharacterization) -> TableResult:
         [
             "Conversion gain",
             result.conversion_gain_e_per_dn,
-            "e-/DN",
+            "e-/LSB",
             "Not assessed",
         ],
         ["Read noise", result.read_noise_e, "e-", "Not assessed"],
-        ["Dark temporal noise", result.dark_temporal_noise_dn, "DN", "Not assessed"],
+        ["Dark temporal noise", result.dark_temporal_noise_dn, "LSB", "Not assessed"],
         [
             "Saturation capacity",
             result.saturation_capacity_e,
             "e-",
             saturation_status,
         ],
-        ["Saturation signal", result.saturation_signal_dn, "DN", saturation_status],
+        ["Saturation signal", result.saturation_signal_dn, "LSB", saturation_status],
         ["Dynamic range", result.dynamic_range_db, "dB", "Not assessed"],
-        ["Fit intercept", result.fit_intercept_dn2, "DN^2", "Not assessed"],
+        ["Fit intercept", result.fit_intercept_dn2, "LSB^2", "Not assessed"],
         ["Fit R^2", result.fit_r_squared, "", "Not assessed"],
         ["Levels in linear fit", int(np.count_nonzero(result.fit_mask)), "", ""],
         ["Excluded stuck pixels", result.excluded_pixel_count, "pixel", ""],
@@ -169,7 +169,7 @@ def run_photon_transfer_characterization(
         result.mean_signal_dn.copy(),
         result.temporal_variance_dn2.copy(),
         "ptc",
-        units=("DN", "DN^2"),
+        units=("LSB", "LSB^2"),
         labels=("Mean signal", "Temporal variance"),
     )
     curve_levels = slice(0, result.saturation_index + 1)
@@ -179,7 +179,7 @@ def run_photon_transfer_characterization(
         fit_x,
         result.fit_slope_dn * fit_x + result.fit_intercept_dn2,
         "ptc_fit",
-        units=("DN", "DN^2"),
+        units=("LSB", "LSB^2"),
         labels=("Mean signal", "Fitted variance"),
     )
     positive = result.mean_signal_dn > 0.0

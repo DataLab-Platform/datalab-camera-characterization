@@ -14,7 +14,7 @@ Select the dark frames, then choose **Plugins > Camera & Detector Characterizati
 
 The method has one **Dark frames** slot. Every frame carries its exposure time in `plugin.org.datalab.camera-characterization.exposure_time_s`. By default, at least three exposure levels are needed. Also set the frame role to `dark`: otherwise, the other methods take these frames as flat frames. See [Use your own frames](getting-started.md#use-your-own-frames).
 
-**Parameters:** minimum frame and level counts, saturation level and warning fraction, conversion gain (0 keeps DN units), hot-pixel threshold, background window, histogram bins, aggregation block size.
+**Parameters:** minimum frame and level counts, saturation level and warning fraction, conversion gain (0 keeps LSB units), hot-pixel threshold, background window, histogram bins, aggregation block size.
 
 ## Results
 
@@ -22,8 +22,8 @@ The method has one **Dark frames** slot. Every frame carries its exposure time i
 | --- | --- | --- |
 | `dark_ramp` | Signal | Mean dark signal of regular pixels versus exposure time, with the metrics table |
 | `dark_variance_ramp` | Signal | Mean dark temporal variance versus exposure time |
-| `dark_current_map` | Image | Dark current per pixel, in e⁻/s (DN/s without gain); NaN where no fit is possible |
-| `offset_map` | Image | Offset per pixel, in DN |
+| `dark_current_map` | Image | Dark current per pixel, in e⁻/s (LSB/s without gain); NaN where no fit is possible |
+| `offset_map` | Image | Offset per pixel, in LSB |
 | `hot_pixel_map` | Image | 0 regular, 1 hot, 2 stuck |
 | `dark_current_distribution` | Signal | Histogram of the dark-current map |
 
@@ -49,7 +49,7 @@ Dark electrons also follow a Poisson law. The ratio of the mean and variance ram
 
 ## Demonstration
 
-The **Synthetic uncooled CMOS dark ramp** simulates a 96 × 128, 12-bit sensor (2 e⁻/DN, 3 e⁻ read noise). Its mean dark current is 40 e⁻/s with 10 % non-uniformity, 0.2 % of hot pixels are 30 times hotter, and an amplifier glow of 150 e⁻/s peaks in the lower-right corner. It holds four dark frames at each of 0.5, 1, 2, 4 and 8 s; most hot pixels saturate at 8 s. The glow shows in the dark-current map but not in the offset map: a ramp separates what grows with the exposure from the fixed pattern.
+The **Synthetic uncooled CMOS dark ramp** simulates a 96 × 128, 12-bit sensor (2 e⁻/LSB, 3 e⁻ read noise). Its mean dark current is 40 e⁻/s with 10 % non-uniformity, 0.2 % of hot pixels are 30 times hotter, and an amplifier glow of 150 e⁻/s peaks in the lower-right corner. It holds four dark frames at each of 0.5, 1, 2, 4 and 8 s; most hot pixels saturate at 8 s. The glow shows in the dark-current map but not in the offset map: a ramp separates what grows with the exposure from the fixed pattern.
 
 The validation suite checks the results against the simulator truth: mean dark current within 3 %, non-uniformity within 10 %, hot-pixel recall and precision of at least 95 %, and indicative gain within 5 %.
 

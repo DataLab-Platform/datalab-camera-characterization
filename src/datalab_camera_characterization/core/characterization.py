@@ -1,4 +1,4 @@
-"""Batch reference implementation of relative Camera metrics in DN."""
+"""Batch reference implementation of relative Camera metrics in LSB."""
 
 from __future__ import annotations
 
@@ -32,7 +32,7 @@ class CameraCharacterizationError(ValueError):
 
 @dataclasses.dataclass(frozen=True)
 class RelativeCameraCharacterization:
-    """Relative temporal Camera metrics expressed only in DN and seconds."""
+    """Relative temporal Camera metrics expressed only in LSB and seconds."""
 
     validation: CameraInputValidation
     exposure_times_s: np.ndarray

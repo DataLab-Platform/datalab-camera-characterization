@@ -190,7 +190,7 @@ def test_selection_readiness_explains_what_each_method_needs() -> None:
         assert relative.status is RecipeReadinessStatus.READY
         assert relative.bindings == {"dark_frames": dark, "flat_frames": flats}
 
-        # Two exposure levels are enough for relative DN, not for a PTC
+        # Two exposure levels are enough for relative LSB, not for a PTC
         photon_transfer = plugin.assess_recipe(PHOTON_TRANSFER_RECIPE.recipe_id)
         assert photon_transfer.status is RecipeReadinessStatus.NOT_READY
         assert [item.code for item in photon_transfer.diagnostics] == [
@@ -567,7 +567,7 @@ def test_desktop_dark_ramp_example_seeds_only_its_recipe_parameters(
 def test_trying_the_photon_transfer_ladder_with_relative_dn(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """One exposure ladder also feeds the relative-DN linearity analysis."""
+    """One exposure ladder also feeds the relative-LSB linearity analysis."""
     monkeypatch.setattr(RecipeInputDialog, "exec", _no_assignment_dialog)
     monkeypatch.setattr(CameraRecipeParameters, "edit", lambda *_a, **_k: True)
     with (

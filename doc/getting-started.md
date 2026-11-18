@@ -30,7 +30,7 @@ DataLab then adds:
 - in the signal panel, the response curve with its metrics table, the row and column profiles and two distributions;
 - in the image panel, the mean dark and flat images, and the DSNU-like, PRNU-like and candidate-pixel maps.
 
-[Relative characterization in DN](relative-dn.md) explains each result.
+[Relative characterization in LSB](relative-dn.md) explains each result.
 
 ## Other Examples
 
@@ -47,7 +47,7 @@ The methods read two metadata entries on each image:
 
 | Key | Value | Use |
 | --- | --- | --- |
-| `plugin.org.datalab.camera-characterization.exposure_time_s` | Exposure time in seconds, finite and non-negative | Required on flat frames (relative-DN and photon transfer) and on dark frames (dark current) |
+| `plugin.org.datalab.camera-characterization.exposure_time_s` | Exposure time in seconds, finite and non-negative | Required on flat frames (relative-LSB and photon transfer) and on dark frames (dark current) |
 | `plugin.org.datalab.camera-characterization.frame_role` | `dark` or `flat` | Optional. Without it, frames with an exposure time are flat frames |
 
 Set them with **Edit > Metadata > Add metadata...**. While the plugin is active, the **Known keys** list offers both keys. When a key is missing, the method status in the **Applications** catalog points to this dialog.
@@ -64,4 +64,4 @@ To read the exposure time from titles such as `Flat 5 ms 01`, select the frames 
 
 `Flat 5 ms 01` gives `0.005`. The preview shows each value before you click OK. For titles in seconds such as `Dark 0.5 s 01`, use the extraction pattern `([\d.]+)\s*s\b` and a scale factor of `1`.
 
-To set the frame role, select the dark frames, then set the key `plugin.org.datalab.camera-characterization.frame_role`, the value pattern `dark` and the String conversion. Repeat with `flat` for the flat frames. Set the role when dark frames carry an exposure time, as in a dark ramp: otherwise, the relative-DN and photon transfer methods take them as flat frames.
+To set the frame role, select the dark frames, then set the key `plugin.org.datalab.camera-characterization.frame_role`, the value pattern `dark` and the String conversion. Repeat with `flat` for the flat frames. Set the role when dark frames carry an exposure time, as in a dark ramp: otherwise, the relative-LSB and photon transfer methods take them as flat frames.

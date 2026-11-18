@@ -122,7 +122,7 @@ def characterize_photon_transfer(
     For a shot-noise-limited linear sensor, the dark-corrected temporal
     variance grows linearly with the dark-corrected mean signal:
     ``variance_dn2 = mean_signal_dn / K`` where ``K`` is the conversion gain in
-    electrons per DN. Per-pixel temporal variances exclude fixed-pattern noise,
+    electrons per LSB. Per-pixel temporal variances exclude fixed-pattern noise,
     so two frames per level are enough (equivalent to the pair-difference
     method).
 
